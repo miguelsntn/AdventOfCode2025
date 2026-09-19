@@ -1,5 +1,7 @@
 package software.aoc.day02.b;
 
+import software.aoc.day02.Range;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -7,7 +9,6 @@ import java.util.stream.Collectors;
 
 public class GiftShopDatabase {
     private final List<Range> ranges;
-
     private static final Pattern SILLY_PATTERN = Pattern.compile("^(.+)\\1+$");
 
     private GiftShopDatabase(List<Range> ranges) {
@@ -21,7 +22,7 @@ public class GiftShopDatabase {
 
         List<Range> parsedRanges = Arrays.stream(rawRanges.split(","))
                 .map(Range::from)
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(), List::copyOf));
 
         return new GiftShopDatabase(parsedRanges);
     }

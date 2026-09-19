@@ -1,5 +1,7 @@
 package software.aoc.day02.a;
 
+import software.aoc.day02.Range;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,7 +20,7 @@ public class GiftShopDatabase {
 
         List<Range> parsedRanges = Arrays.stream(rawRanges.split(","))
                 .map(Range::from)
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(), List::copyOf));
 
         return new GiftShopDatabase(parsedRanges);
     }
