@@ -1,26 +1,58 @@
-# Day 2: Gift Shop Database
+# Día 2: Tienda de Regalos (Base de Datos)
 
-El problema nos pide sanear la base de datos de la tienda de regalos del Polo Norte encontrando y sumando los IDs de productos inválidos dentro de una serie de rangos numéricos. En la Parte A, un ID es inválido si está formado por una secuencia de dígitos repetida exactamente dos veces. En la Parte B, la regla se amplía y un ID es inválido si está formado por una secuencia repetida dos o más veces.
+El problema pide sanear la base de datos de la tienda de regalos del Polo Norte encontrando y sumando los IDs de productos inválidos dentro de una serie de rangos numéricos.
 
-## Fundamentos
+* **En la Parte A**, la regla de validación nos indica que un ID es inválido si está formado por una secuencia de dígitos simétrica que se repite exactamente dos veces.
+* **En la Parte B**, la regla se amplía y se vuelve más compleja: un ID es inválido si está formado por cualquier secuencia repetida, sin importar la longitud del patrón ni si se repite 2, 3 o más veces.
 
-* **Abstracción** *(Simplificación de detalles complejos mediante interfaces o contratos claros)*: La clase `Range` expone el método público `expandToSequence()`, el cual abstrae la generación de números secuenciales. El cliente (`GiftShopDatabase`) no necesita programar bucles manuales ni conocer los límites exactos, simplemente pide la secuencia expandida.
-* **Encapsulamiento** *(Ocultación del estado interno y protección de los datos)*: Los límites numéricos `start` y `end` de la clase `Range`, así como la lista interna de rangos en `GiftShopDatabase`, son privados y finales. Están blindados para que ninguna clase externa pueda alterarlos o recalcularlos directamente.
-* **Modularidad** *(División del programa en módulos bien definidos e independientes)*: Se aísla el concepto puramente matemático del intervalo (`Range`) del concepto de negocio y filtrado de la base de datos (`GiftShopDatabase`).
-* **Alta Cohesión y Bajo Acoplamiento** *(Los módulos hacen una sola cosa y dependen mínimamente entre sí)*: Existe alta cohesión porque `Range` se dedica únicamente a definir límites y `GiftShopDatabase` asume la única responsabilidad de orquestar la suma de los códigos inválidos. El acoplamiento es bajo porque el orquestador opera sobre el `expandToSequence()` sin tener que manipular los límites internos del rango manualmente.
+## 1. Fundamentos de la Ingeniería del Software
 
-## Principios de Diseño
+* **Abstracción (Simplificación de la complejidad):** He aplicado este fundamento ocultando los detalles complejos detrás de una interfaz simple. La clase `Range` expone el método público `expandToSequence()`. El cliente o clase orquestadora no necesita saber si internamente hay un bucle `for`, ni cómo se manejan los límites exactos de los intervalos numéricos. Toda esa lógica está abstraída; el orquestador simplemente le pide al rango que se expanda y recibe el flujo de datos.
 
-* **Good Naming** *(Nombres descriptivos y precisos)*: El uso de nombres claros ligados al dominio del problema, como `sumInvalidIds` e `isRepeatedPattern`, permite que el código sea autoexplicativo y se lea de forma natural, evitando el uso de comentarios innecesarios.
-* **Single Responsibility Principle (SRP)** *(Una clase debe tener una sola razón para cambiar)*: La clase `Range` solo cambiará si se modifica la forma en que se definen los límites matemáticos. La clase `GiftShopDatabase` solo cambiará si los elfos deciden modificar las reglas de validación de los IDs.
-* **Open/Closed Principle (OCP)** *(Abierto a la extensión, cerrado a la modificación)*: La separación en paquetes `a` y `b` permite actualizar las reglas del negocio (pasar de buscar patrones repetidos exactamente dos veces, a buscarlos dos o más veces mediante expresiones regulares) extendiendo la funcionalidad sin alterar el código que resolvía la primera parte.
 
-## Técnicas y Patrones
+* **Encapsulamiento (Protección de la integridad del estado):** Para garantizar que el programa sea robusto, los atributos numéricos de la clase `Range` (`start` y `end`), así como la lista de rangos en `GiftShopDatabase`, están declarados como `private final`. Con esto logro esconder la complejidad y mostrar una interfaz más simple. Nadie desde fuera puede alterar un límite o modificar la lista original directamente.
 
-* **Factory Method (Creacional)** *(Encapsulación de la creación de objetos en métodos estáticos dedicados)*: Tanto `Range.from` como `GiftShopDatabase.from` encapsulan la lógica de instanciación a partir de textos planos separados por guiones o comas. Los constructores son privados, aislando al resto del sistema de la estructura del fichero de entrada y evitando instanciaciones incorrectas.
-* **Clases Inmutables** *(Objetos cuyo estado no puede ser modificado tras su creación)*: La clase `Range` es inmutable; una vez creados sus límites de inicio y fin, estos no pueden variar, lo que garantiza la integridad de los datos durante el procesamiento masivo.
 
-## Paradigmas
+* **Modularidad (División estratégica del sistema):** El sistema divide el código en módulos que pueden ser desarrollados y probados de forma independiente. He separado el concepto puramente matemático del intervalo (la clase `Range`) de la lógica de negocio y filtrado de la base de datos (la clase `GiftShopDatabase`).
 
-* **Orientación a Objetos** *(Organización del software en objetos que encapsulan estado y comportamiento)*: En lugar de trabajar con arrays primitivos de strings o tuplas numéricas, se han creado entidades robustas (`Range` y `GiftShopDatabase`) que controlan su propio estado interno y exponen comportamientos seguros.
-* **Programación Funcional** *(Estilo declarativo basado en funciones puras y datos inmutables)*: El núcleo del procesamiento (`sumInvalidIds`) utiliza la API de Streams de Java (`flatMapToLong`, `filter`, `sum`). Esto permite leer el código como una tubería declarativa de transformaciones, procesando millones de IDs sin necesidad de utilizar bucles tradicionales ni mutar variables acumuladoras globales.
+
+* **Alta Cohesión y Bajo Acoplamiento:**
+* *Alta cohesión:* Las partes de cada módulo están estrechamente relacionadas y enfocadas a una única tarea. `Range` se dedica en exclusiva a definir límites y generar números. `GiftShopDatabase` cohesiona la orquestación del filtrado y la suma total.
+
+
+* *Bajo acoplamiento:* Los módulos tienen muy pocas interdependencias. La clase `GiftShopDatabase` opera directamente sobre la secuencia numérica generada, sin importarle la estructura interna del rango.
+
+
+
+
+
+## 2. Principios de Diseño (SOLID y Clean Code)
+
+* **Good Naming (Código Expresivo y Auto-documentado):** El código debe ser claro y comprensible, facilitando la lectura sin necesidad de comentarios. En lugar de comentarios superfluos, he asignado nombres claros y relacionados con su propósito a los métodos. Nombres como `sumInvalidIds()`, `expandToSequence()` e `isTwiceRepeatedPattern()` permiten que el código se lea casi como lenguaje natural, cumpliendo la regla de que los métodos deben nombrarse por lo que hacen.
+
+
+* **Single Responsibility Principle - SRP (Principio de Responsabilidad Única):** Cada clase tiene una sola razón para cambiar, reflejando una alta cohesión. Mi diseño garantiza esto: si mañana cambia la matemática de los intervalos, solo se modificará `Range`. Si cambian las normativas de validación de los elfos, solo se modificará `GiftShopDatabase`.
+
+
+* **Open/Closed Principle - OCP (Abierto a la extensión, cerrado a la modificación):** Las clases deben estar abiertas para la extensión, pero cerradas para la modificación. Al pasar de la Parte A a la Parte B, mantuve el código original intacto. Empaqueté la solución extendida en `software.aoc.day02.b` para aplicar las nuevas reglas (usando expresiones regulares), dejando la Parte A cerrada y a salvo.
+
+
+* **Don't Repeat Yourself - DRY (No repetir código):** Se debe evitar la duplicación de código promoviendo su reutilización. Al notar que la clase `Range` era idéntica para ambas partes del problema, la extraje a un paquete padre compartido (`software.aoc.day02`), asegurando que esa pieza de conocimiento tuviera una representación única e inequívoca.
+
+
+
+## 3. Técnicas y Patrones de Diseño
+
+* **Patrón Creacional: Factory Method:** He evitado el uso de constructores públicos directos con `new`. En su lugar, los constructores son privados para restringir la creación directa y he utilizado un método estático que encapsula la creación del objeto. Métodos como `Range.from()` y `GiftShopDatabase.from()` actúan como filtros: parsean el texto, validan que no sea nulo, dividen las cadenas de texto y aseguran que el objeto nazca en un estado perfectamente válido.
+
+
+* **Inmutabilidad del Modelo (Clases Inmutables y Colecciones):** Las clases del modelo son inmutables, es decir, su estado no cambia una vez creado. La clase `Range` es inmutable. Además, en la instanciación de `GiftShopDatabase`, apliqué inmutabilidad estricta a las colecciones utilizando `List.copyOf()` al terminar de recolectar los rangos. Esto sella la lista y evita por completo las fugas de memoria o modificaciones externas.
+
+
+
+## 4. Paradigmas de Programación
+
+* **Paradigma de Orientación a Objetos (OO):** He modelado los conceptos del problema elevándolos a entidades reales con estado propio. En lugar de trabajar con *arrays* primitivos o simples variables de texto para representar los rangos numéricos, he diseñado clases robustas que agrupan lógicamente sus datos y comportamientos.
+
+
+* **Programación Funcional (API de Streams):** Este paradigma trata la computación como la evaluación de funciones y favorece la inmutabilidad. He implementado el núcleo de procesamiento utilizando la API de Streams de Java, la cual facilita el procesamiento funcional de colecciones permitiendo operaciones más eficientes y legibles de manera declarativa. Específicamente, he utilizado la operación intermedia `flatMapToLong` para aplanar múltiples flujos numéricos en uno solo, seguida de `filter` y la operación final `sum` para consumir el *stream* y obtener el resultado de forma impecable sin recurrir a costosos bucles imperativos.
