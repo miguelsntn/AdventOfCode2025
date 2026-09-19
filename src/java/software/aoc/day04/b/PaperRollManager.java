@@ -18,7 +18,6 @@ public class PaperRollManager {
         int[] dCol = {-1,  0,  1, -1, 1, -1, 0, 1};
 
         do {
-            // Uso avanzado de Streams para filtrar y recolectar las coordenadas a eliminar
             List<int[]> rollsToRemove = IntStream.range(0, rows).boxed()
                     .flatMap(r -> IntStream.range(0, cols)
                             .filter(c -> mutableGrid[r][c] == '@')
