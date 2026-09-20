@@ -1,75 +1,60 @@
 package software.aoc.day05.b;
 
+import software.aoc.day05.FreshRange;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collector;
 
 public class InventorySystem {
-    private final List<FreshRange> ranges;
+    private final List<FreshRange> sortedRanges;
 
-    private InventorySystem(List<FreshRange> ranges) {
-        this.ranges = new ArrayList<>(ranges);
-        Collections.sort(this.ranges);
+    private InventorySystem(List<FreshRange> sortedRanges) {
+        this.sortedRanges = List.copyOf(sortedRanges);
     }
 
-    public static InventorySystem from(List<String> rangeLines) {
-        if (rangeLines == null) {
-            throw new IllegalArgumentException("Las lineas de rangos no pueden ser nulas");
+    public static InventorySystem fromRanges(String rangesSection) {
+        if (rangesSection == null || rangesSection.isBlank()) {
+            return new InventorySystem(List.of());
         }
 
-        List<FreshRange> parsedRanges = new ArrayList<>();
-        for (String line : rangeLines) {
-            String[] parts = line.split("-");
-            long start = Long.parseLong(parts[0].trim());
-            long end = Long.parseLong(parts[1].trim());
-            parsedRanges.add(new FreshRange(start, end));
-        }
+        List<FreshRange> parsedRanges = rangesSection.lines()
+                .filter(line -> !line.isBlank())
+                .map(FreshRange::from)
+                .sorted()
+                .toList();
 
         return new InventorySystem(parsedRanges);
     }
 
-    public long countTotalFresh() {
-        if (ranges.isEmpty()) {
-            return 0;
-        }
-
-        long total = 0;
-        long currentStart = ranges.get(0).start;
-        long currentEnd = ranges.get(0).end;
-
-        for (int i = 1; i < ranges.size(); i++) {
-            FreshRange next = ranges.get(i);
-
-            if (next.start <= currentEnd + 1) {
-                currentEnd = Math.max(currentEnd, next.end);
-            } else {
-                total += (currentEnd - currentStart + 1);
-                currentStart = next.start;
-                currentEnd = next.end;
-            }
-        }
-
-        total += (currentEnd - currentStart + 1);
-
-        return total;
+    public long countTotalFreshCapacity() {
+        return sortedRanges.stream()
+                .collect(mergeOverlappingRanges())
+                .stream()
+                .mapToLong(FreshRange::size)
+                .sum();
     }
 
-    private static class FreshRange implements Comparable<FreshRange> {
-        private final long start;
-        private final long end;
+    private Collector<FreshRange, List<FreshRange>, List<FreshRange>> mergeOverlappingRanges() {
+        return Collector.of(
+                ArrayList::new,
+                (mergedList, currentRange) -> {
+                    if (mergedList.isEmpty()) {
+                        mergedList.add(currentRange);
+                    } else {
+                        int lastIndex = mergedList.size() - 1;
+                        FreshRange lastRange = mergedList.get(lastIndex);
 
-        public FreshRange(long start, long end) {
-            this.start = start;
-            this.end = end;
-        }
-
-        @Override
-        public int compareTo(FreshRange other) {
-            int startCompare = Long.compare(this.start, other.start);
-            if (startCompare != 0) {
-                return startCompare;
-            }
-            return Long.compare(this.end, other.end);
-        }
+                        if (lastRange.connectsWith(currentRange)) {
+                            mergedList.set(lastIndex, lastRange.merge(currentRange));
+                        } else {
+                            mergedList.add(currentRange);
+                        }
+                    }
+                },
+                (list1, list2) -> {
+                    list1.addAll(list2);
+                    return list1;
+                }
+        );
     }
 }

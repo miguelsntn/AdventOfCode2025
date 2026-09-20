@@ -1,45 +1,58 @@
 package test;
 
 import software.aoc.day05.a.InventorySystem;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class Day05ATest {
+    private static final String EXAMPLE_INPUT = """
+            3-5
+            10-14
+            16-20
+            12-18
+            
+            1
+            5
+            8
+            11
+            17
+            32
+            """;
 
-    public static void main(String[] args) {
+    @Test
+    public void should_count_fresh_ingredients_correctly_for_specification_example() {
+        String cleanInput = EXAMPLE_INPUT.replace("\r", "");
+        String[] sections = cleanInput.trim().split("\n\\s*\n", 2);
+
+        InventorySystem system = InventorySystem.fromRanges(sections[0]);
+        long freshCount = system.countFreshIngredients(sections[1]);
+
+        assertThat(freshCount).isEqualTo(3L);
+    }
+
+    @Test
+    public void solve_puzzle_with_real_input() {
         Path inputPath = Paths.get("test", "resources", "day05-a", "input.txt");
 
         try {
-            List<String> lines = Files.readAllLines(inputPath);
+            String rawContent = Files.readString(inputPath);
 
-            List<String> rangeLines = new ArrayList<>();
-            List<Long> ingredientIds = new ArrayList<>();
-            boolean isParsingRanges = true;
+            String cleanContent = rawContent.replace("\r", "");
 
-            for (String line : lines) {
-                if (line.trim().isEmpty()) {
-                    isParsingRanges = false;
-                    continue;
-                }
+            String[] sections = cleanContent.trim().split("\n\\s*\n", 2);
 
-                if (isParsingRanges) {
-                    rangeLines.add(line);
-                } else {
-                    ingredientIds.add(Long.parseLong(line.trim()));
-                }
-            }
+            InventorySystem system = InventorySystem.fromRanges(sections[0]);
+            long freshCount = system.countFreshIngredients(sections[1]);
 
-            InventorySystem inventory = InventorySystem.from(rangeLines);
-            long freshCount = inventory.countFresh(ingredientIds);
-
-            System.out.println("El numero de ingredientes frescos es: " + freshCount);
+            System.out.println("La respuesta al rompecabezas es: " + freshCount);
 
         } catch (Exception e) {
-            System.err.println("Error procesando el archivo: " + e.getMessage());
+            System.err.println("Error leyendo el archivo: " + e.getMessage());
         }
     }
 }

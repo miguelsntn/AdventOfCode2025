@@ -1,6 +1,6 @@
 package software.aoc.day05.a;
 
-import java.util.ArrayList;
+import software.aoc.day05.FreshRange;
 import java.util.List;
 
 public class InventorySystem {
@@ -10,24 +10,27 @@ public class InventorySystem {
         this.freshRanges = List.copyOf(freshRanges);
     }
 
-    public static InventorySystem from(List<String> rangeLines) {
-        if (rangeLines == null) {
-            throw new IllegalArgumentException("Las lineas de rangos no pueden ser nulas");
+    public static InventorySystem fromRanges(String rangesSection) {
+        if (rangesSection == null || rangesSection.isBlank()) {
+            return new InventorySystem(List.of());
         }
 
-        List<FreshRange> ranges = new ArrayList<>();
-        for (String line : rangeLines) {
-            String[] parts = line.split("-");
-            long start = Long.parseLong(parts[0].trim());
-            long end = Long.parseLong(parts[1].trim());
-            ranges.add(new FreshRange(start, end));
-        }
+        List<FreshRange> ranges = rangesSection.lines()
+                .filter(line -> !line.isBlank())
+                .map(FreshRange::from)
+                .toList();
 
         return new InventorySystem(ranges);
     }
 
-    public long countFresh(List<Long> ingredientIds) {
-        return ingredientIds.stream()
+    public long countFreshIngredients(String idsSection) {
+        if (idsSection == null || idsSection.isBlank()) {
+            return 0;
+        }
+
+        return idsSection.lines()
+                .filter(line -> !line.isBlank())
+                .mapToLong(Long::parseLong)
                 .filter(this::isFresh)
                 .count();
     }
@@ -39,19 +42,5 @@ public class InventorySystem {
             }
         }
         return false;
-    }
-
-    private static class FreshRange {
-        private final long start;
-        private final long end;
-
-        public FreshRange(long start, long end) {
-            this.start = start;
-            this.end = end;
-        }
-
-        public boolean contains(long id) {
-            return id >= start && id <= end;
-        }
     }
 }
