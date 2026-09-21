@@ -1,61 +1,29 @@
 package software.aoc.day10.b;
 
+import software.aoc.day10.MachineBlueprint;
+import software.aoc.day10.MachineOptimizer;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-public class Machine {
-    private final int[] targets;
-    private final List<int[]> buttons;
+public class JoltageOptimizer implements MachineOptimizer {
 
-    private Machine(int[] targets, List<int[]> buttons) {
-        this.targets = targets;
-        this.buttons = List.copyOf(buttons);
-    }
+    @Override
+    public long calculateMinimumPresses(MachineBlueprint blueprint) {
+        int numCounters = blueprint.joltageTargets().size();
+        int numButtons = blueprint.buttons().size();
 
-    public static Machine parse(String line) {
-        Matcher targetMatcher = Pattern.compile("\\{([^}]+)\\}").matcher(line);
-        if (!targetMatcher.find()) {
-            throw new IllegalArgumentException("No se encontraron objetivos de voltaje: " + line);
-        }
-        String[] targetStrs = targetMatcher.group(1).split(",");
-        int[] parsedTargets = new int[targetStrs.length];
-        for (int i = 0; i < targetStrs.length; i++) {
-            parsedTargets[i] = Integer.parseInt(targetStrs[i].trim());
-        }
-
-        List<int[]> parsedButtons = new ArrayList<>();
-        Matcher btnMatcher = Pattern.compile("\\(([^)]*)\\)").matcher(line);
-        while (btnMatcher.find()) {
-            String content = btnMatcher.group(1).trim();
-            if (content.isEmpty()) continue;
-            String[] parts = content.split(",");
-            int[] btn = new int[parts.length];
-            for (int i = 0; i < parts.length; i++) {
-                btn[i] = Integer.parseInt(parts[i].trim());
-            }
-            parsedButtons.add(btn);
-        }
-
-        return new Machine(parsedTargets, parsedButtons);
-    }
-
-    public int getMinPresses() {
-        int numCounters = targets.length;
-        int numButtons = buttons.size();
-
-        double[][] a = new double[numCounters][numButtons];
+        double[][] matrixA = new double[numCounters][numButtons];
         for (int j = 0; j < numButtons; j++) {
-            for (int idx : buttons.get(j)) {
-                a[idx][j] += 1.0;
+            for (int idx : blueprint.buttons().get(j)) {
+                matrixA[idx][j] += 1.0;
             }
         }
 
         List<Simplex.Constraint> baseConstraints = new ArrayList<>();
         for (int i = 0; i < numCounters; i++) {
-            baseConstraints.add(new Simplex.Constraint(a[i].clone(), Simplex.Relation.EQ, targets[i]));
+            baseConstraints.add(new Simplex.Constraint(matrixA[i].clone(), Simplex.Relation.EQ, blueprint.joltageTargets().get(i)));
         }
 
         double[] cost = new double[numButtons];
@@ -63,9 +31,9 @@ public class Machine {
 
         double result = BranchAndBound.solveMinIntegerSum(numButtons, baseConstraints, cost);
         if (Double.isInfinite(result)) {
-            throw new IllegalStateException("No se encontro una configuracion valida.");
+            throw new IllegalStateException("No se encontro una configuracion de voltaje valida.");
         }
-        return (int) Math.round(result);
+        return Math.round(result);
     }
 
     private static class BranchAndBound {
@@ -81,43 +49,30 @@ public class Machine {
             all.addAll(extra);
 
             Simplex.Result r = Simplex.solve(numVars, all, cost);
-            if (r.status != Simplex.Status.OPTIMAL) {
-                return;
-            }
-            if (r.objective >= best[0] - 1e-6) {
-                return;
-            }
+            if (r.status != Simplex.Status.OPTIMAL || r.objective >= best[0] - 1e-6) return;
 
             int fracIdx = -1;
             for (int j = 0; j < numVars; j++) {
-                double v = r.x[j];
-                if (Math.abs(v - Math.round(v)) > 1e-5) {
-                    fracIdx = j;
-                    break;
+                if (Math.abs(r.x[j] - Math.round(r.x[j])) > 1e-5) {
+                    fracIdx = j; break;
                 }
             }
 
             if (fracIdx == -1) {
-                double total = Math.round(r.objective);
-                if (total < best[0]) {
-                    best[0] = total;
-                }
+                best[0] = Math.min(best[0], Math.round(r.objective));
                 return;
             }
 
             double v = r.x[fracIdx];
-            long floorV = (long) Math.floor(v + 1e-7);
-            long ceilV = (long) Math.ceil(v - 1e-7);
-
             double[] coeffs = new double[numVars];
             coeffs[fracIdx] = 1.0;
 
             List<Simplex.Constraint> left = new ArrayList<>(extra);
-            left.add(new Simplex.Constraint(coeffs.clone(), Simplex.Relation.LE, floorV));
+            left.add(new Simplex.Constraint(coeffs.clone(), Simplex.Relation.LE, (long) Math.floor(v + 1e-7)));
             recurse(numVars, baseConstraints, cost, left, best);
 
             List<Simplex.Constraint> right = new ArrayList<>(extra);
-            right.add(new Simplex.Constraint(coeffs.clone(), Simplex.Relation.GE, ceilV));
+            right.add(new Simplex.Constraint(coeffs.clone(), Simplex.Relation.GE, (long) Math.ceil(v - 1e-7)));
             recurse(numVars, baseConstraints, cost, right, best);
         }
     }
@@ -127,21 +82,17 @@ public class Machine {
         enum Status { OPTIMAL, INFEASIBLE, UNBOUNDED }
 
         static class Constraint {
-            double[] coeffs;
-            Relation relation;
-            double rhs;
+            final double[] coeffs;
+            final Relation relation;
+            final double rhs;
 
             Constraint(double[] coeffs, Relation relation, double rhs) {
-                this.coeffs = coeffs;
-                this.relation = relation;
-                this.rhs = rhs;
+                this.coeffs = coeffs; this.relation = relation; this.rhs = rhs;
             }
         }
 
         static class Result {
-            Status status;
-            double objective;
-            double[] x;
+            Status status; double objective; double[] x;
         }
 
         private static final double BIG_M = 1.0e7;
