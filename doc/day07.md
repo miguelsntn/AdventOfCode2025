@@ -1,26 +1,67 @@
 # Day 7: Laboratories
 
-El problema de hoy nos introduce a una simulación física en una cuadrícula bidimensional (el colector de taquiones). En la Parte A, modelamos el comportamiento clásico donde los rayos se dividen y se fusionan si coinciden en el mismo espacio. En la Parte B, las reglas cambian a un modelo cuántico ("Many-Worlds Interpretation"), donde cada división genera líneas temporales independientes, creando una explosión combinatoria masiva que exige un cambio radical en la estrategia de cálculo.
+**Parte A:** Simular el recorrido de un haz de taquiones a través de un colector bidimensional, donde el rayo se divide al chocar contra un divisor (`^`). El objetivo es calcular el número total de divisiones empleando un motor físico de mecánica clásica.
 
-## Fundamentos
+**Parte B:** Aplicar una interpretación de universos paralelos (Many-Worlds) a una única partícula. Al chocar contra un divisor, la realidad se bifurca. El objetivo es calcular la inmensa cantidad de líneas temporales activas al final del recorrido aplicando física cuántica.
 
-* **Abstracción** *(Simplificación de detalles complejos mediante interfaces o contratos claros)*: La clase `TachyonManifold` oculta la complejidad del recorrido de la matriz. El cliente que consume la clase no necesita saber si internamente se está utilizando un `Set` para fusionar rayos (Parte A) o un arreglo de frecuencias para la Programación Dinámica (Parte B).
-* **Eficiencia y Complejidad Espacial** *(Optimización de recursos)*: El diseño invierte el enfoque clásico: en lugar de modelar cada rayo y seguir su ruta recursivamente (lo cual generaría un árbol exponencial infinito en la Parte B), modelamos el *espacio* (la cuadrícula) y calculamos qué ocurre fila por fila. Esto garantiza un tiempo de ejecución predecible de $O(R \times C)$ (Filas por Columnas).
-* **Inmutabilidad** *(Protección contra efectos secundarios)*: La matriz espacial (`List<String>`) se copia en el constructor y jamás se altera durante la simulación. El estado que muta (los rayos activos o las líneas temporales) se recrea desde cero en cada iteración de fila.
+## Fundamentos de la Ingeniería del Software
+
+* **Abstracción:** Consiste en ocultar los detalles complejos detrás de una interfaz simple. La interfaz `TachyonPhysicsEngine` oculta las complejas fórmulas matemáticas, permitiendo que el cliente simplemente pida calcular un resultado sin conocer la mecánica interna.
+
+
+* **Modularidad:** El software se divide en módulos que pueden ser desarrollados, modificados y probados de forma independiente. Existe una separación total entre el contenedor espacial (`TachyonManifold`) y los motores físicos.
+
+
+* **Alta Cohesión:** Las partes de un módulo están estrechamente relacionadas y enfocadas a una única tarea. `TachyonManifold` se dedica exclusivamente a gestionar la topología del mapa inmutable, mientras que los motores físicos asumen únicamente las fórmulas de propagación.
+
+
+* **Bajo Acoplamiento:** Los módulos tienen pocas interdependencias. `TachyonManifold` no sabe qué motor se está utilizando gracias a la abstracción.
+
+
+* **Código Expresivo (Good Naming):** El código es claro, comprensible y facilita el mantenimiento sin necesitar comentarios. Se ha logrado asignando nombres claros, significativos y relacionados con su propósito a clases y métodos (ej. `ClassicalPhysicsEngine`, `simulate`, `findStart`).
+
 
 ## Principios de Diseño
 
-* **Single Responsibility Principle (SRP)** *(Una clase debe tener una sola razón para cambiar)*: El modelo de dominio (`TachyonManifold`) se centra únicamente en la simulación física (gravedad descendente y colisión con divisores). La responsabilidad de leer los archivos y transformar el flujo de texto sigue delegada estrictamente en las clases `Test`.
-* **Open/Closed Principle (OCP)** *(Abierto a la extensión, cerrado a la modificación)*: La transición de la Parte A a la Parte B demuestra este principio a nivel de arquitectura. En lugar de plagar el código original con sentencias `if (isQuantumMode)`, se construyó un modelo matemático completamente nuevo en el paquete `b`, manteniendo la simulación clásica intacta y segura frente a regresiones.
-* **Good Naming** *(Nombres descriptivos y precisos)*: Variables como `activeBeams`, `timelines` y `nextTimelines` reflejan directamente la naturaleza del modelo físico que se está simulando, haciendo que el código sea auto-documentado.
+* **Single Responsibility Principle (SRP):** Cada clase o módulo debe tener una única responsabilidad o razón para cambiar, favoreciendo la cohesión y la claridad del diseño.
 
-## Técnicas y Patrones
 
-* **Programación Dinámica (Dynamic Programming)** *(Técnica algorítmica)*: Es la estrella de la Parte B. Para evitar calcular millones de bifurcaciones independientes (que colapsarían la memoria RAM y la CPU), se utiliza la memoria de la iteración anterior. El arreglo `timelines` actúa como un registro de estado: la cantidad de universos paralelos en la celda actual es simplemente la suma de los universos que cayeron en ella desde la fila inmediatamente anterior.
-* **Deduplicación de Estados (State Merging)** *(Técnica algorítmica)*: En la Parte A, la colisión de rayos que viajan al mismo punto se resuelve elegantemente usando la estructura de datos `Set<Integer>`. Al añadir dos veces la misma columna, la colección descarta automáticamente el duplicado, previniendo cálculos redundantes.
-* **Prevención de Desbordamiento (Overflow)** *(Buena práctica de ingeniería)*: Dado que en la Parte B el tiempo se bifurca constantemente, el crecimiento es exponencial (similar a la secuencia de Fibonacci o potencias de 2). Se utilizó un arreglo de tipos `long[]` para evitar el desbordamiento silencioso que habría ocurrido con enteros de 32 bits (`int`).
+* **Open/Closed Principle (OCP):** Las clases deben estar abiertas a la extensión pero cerradas a la modificación. Para integrar la física cuántica, no se alteró el `TachyonManifold`; simplemente se extendió el sistema inyectando una nueva implementación de la interfaz.
 
-## Paradigmas
 
-* **Orientación a Objetos** *(Organización del software en entidades encapsuladas)*: El tablero entero es modelado como un objeto que gestiona sus propias reglas de negocio y ciclo de vida.
-* **Programación Imperativa Estructurada** *(Control de flujo explícito)*: Debido a que el estado de una fila depende intrínsecamente del estado *final* calculado en la fila anterior (dependencia temporal), se han utilizado bucles imperativos (`for`) clásicos. Este es un caso donde el paradigma funcional puro (como el uso de Streams de Java) introduciría una sobrecarga innecesaria y dificultaría la lectura del algoritmo de propagación de estado.
+* **Dependency Inversion Principle (DIP):** Los módulos de alto nivel no deben depender de módulos de bajo nivel, sino de abstracciones, lo que disminuye la dependencia entre componentes. El simulador depende de la interfaz genérica `TachyonPhysicsEngine`.
+
+
+* **Don't Repeat Yourself (DRY):** Evita la duplicación de código, promoviendo la reutilización. El escaneo del tablero y la búsqueda del punto de inicio se centralizan en el `TachyonManifold` para que los motores no repitan operaciones.
+
+
+* **Keep It Simple, Stupid (KISS) & YAGNI:** El código debe ser claro y evitar complejidad innecesaria. En lugar de seguir millones de rayos individuales recursivamente, agrupamos las incidencias matemáticamente por coordenadas.
+
+## Patrones de Diseño
+
+* **Factory Method (Creacional):** Encapsula la creación de objetos mediante un método estático, en lugar de usar directamente el constructor de la clase. Implementado en `TachyonManifold.from()` para garantizar la integridad inicial de la cuadrícula inmutable.
+
+
+* **Singleton (Creacional):** Restringe la instanciación de una clase a una única instancia. Se aplica en `ClassicalPhysicsEngine` y `QuantumPhysicsEngine` mediante constructores privados y un método `getInstance()`, ya que las leyes de la física no requieren múltiples representaciones en memoria.
+
+## Técnicas y Paradigmas Avanzados
+
+* **Inmutabilidad del modelo:** El estado de las clases no debe cambiar una vez creado, lo que favorece la abstracción y evita errores relacionados con efectos secundarios. Se utilizan colecciones estandarizadas como `List.copyOf()` para sellar la cuadrícula original.
+
+
+* **Inyección de Dependencias:** Consiste en separar la creación de objetos de su uso. En lugar de que la cuadrícula cree la física, esta es proporcionada desde fuera (inyectada por el cliente de pruebas) a través del método `simulate()`, reduciendo el acoplamiento.
+
+
+* **Clases Internas de Clase (Static):** Se pueden instanciar sin necesidad de una instancia de la clase externa y agrupan elementos relacionados. El `record SimulationState` se anida estáticamente dentro de su motor físico para encapsular su estado transitorio.
+
+
+* **Mónadas (Patrón Funcional):** Una Mónada encapsula valores y sus operaciones dentro de un contexto. En la búsqueda del punto de inicio, se utiliza `Optional<T>` para encapsular la presencia o ausencia de un valor, evitando excepciones como `NullPointerException`.
+
+
+* **Programación Funcional y Streams:** Los Streams describen operaciones sobre datos, son inmutables y siguen la lógica FILTER -> MAP -> REDUCE.
+
+
+* Se emplean operaciones intermedias como `filter` (filtra según condición) y `flatMap` (aplana un stream de streams, clave para la división de universos).
+
+
+* Se utilizan operaciones finales como `reduce` (combina todos los elementos en uno solo utilizando un acumulador) y `groupingBy` (agrupa elementos en un Map).
