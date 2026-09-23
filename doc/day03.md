@@ -1,59 +1,78 @@
-# Day 3: Lobby (Sistema de Energía de Emergencia)
+# Día 3: Lobby 
 
 ## Definición del Problema
 
-La historia nos sitúa en el vestíbulo del Polo Norte. Los ascensores y escaleras mecánicas se han quedado sin energía. Para reactivarlos, debemos conectar unos "bancos de baterías de emergencia".
+La historia nos sitúa en el vestíbulo del Polo Norte. Los ascensores y escaleras mecánicas se han quedado sin energía. Para reactivarlos, debemos conectar "bancos de baterías de emergencia".
 
 Los datos de entrada son múltiples líneas de texto. Cada línea representa un **banco de baterías** compuesto por dígitos (ej. `987654321111111`). La regla de oro es que **no podemos reordenar los dígitos**, solo podemos "encender" (seleccionar) algunos de ellos manteniendo su orden original de izquierda a derecha para formar el número más alto posible.
 
-* **En la Parte A**, el sistema de la escalera requiere encender exactamente **2 baterías** por banco. Por ejemplo, de `811111111111119`, el número máximo de dos cifras manteniendo el orden es `89`.
-* **En la Parte B**, la escalera requiere mucha más energía para superar la fricción, obligándonos a encender exactamente **12 baterías** por banco. Esto cambia radicalmente la escala del problema, pasando de buscar un simple entero de dos cifras a construir un número masivo de 12 cifras (ej. `987654321111`).
+## 1. Diferencias entre la Parte A y la Parte B
 
-El objetivo final en ambas partes es sumar el voltaje máximo de todos los bancos y devolver el gran total.
+La evolución de los requisitos entre ambas partes ilustra la flexibilidad del diseño y exige un cambio algorítmico profundo:
 
-## 1. Fundamentos de la Ingeniería del Software
-
-* **Abstracción (Ocultar el "cómo" para exponer solo el "qué"):**
-  La clase orquestadora `EmergencyPowerSystem` expone un único método público: `calculateTotalOutputJoltage()`. Las clases de Test (que actúan como clientes) solo llaman a este método y reciben el resultado final. El test no tiene ni idea de si por debajo se está utilizando un array, una pila (*stack*), bucles `for` o si se saltan líneas vacías. Toda esa complejidad algorítmica está abstraída detrás de una interfaz extremadamente simple y fácil de usar.
-* **Encapsulamiento (Blindaje del estado):**
-  No basta con poner los atributos en `private`; hay que proteger su integridad a lo largo del tiempo. La cadena de texto `ratings` en el modelo `BatteryBank` y la lista de bancos en `EmergencyPowerSystem` son `private final`. Una vez que los objetos se instancian, el lenguaje Java garantiza que su estado interno está blindado y no puede ser alterado ni corrompido accidentalmente por otras partes del programa.
-* **Modularidad (Dividir para vencer):**
-  El sistema no es un bloque de código espagueti. Está dividido en dos módulos claramente diferenciados: un módulo de dominio o datos (`BatteryBank`) y un módulo de servicios lógicos (`EmergencyPowerSystem`). Esto permite aislar los fallos y probar cada pieza por separado.
-* **Alta Cohesión y Bajo Acoplamiento:**
-* *Alta cohesión:* Cada clase está hiperenfocada. `BatteryBank` solo sabe de sí mismo (almacenar un string y validarlo). `EmergencyPowerSystem` solo sabe de orquestar la lista y sumar.
-* *Bajo acoplamiento:* Las dependencias entre clases son mínimas. El orquestador opera sobre los bancos sin depender en absoluto de cómo se leen del disco duro, aislando la lógica matemática del sistema de archivos.
-
-## 2. Principios de Diseño
-
-* **Open/Closed Principle - OCP (Abierto a la extensión, cerrado a la modificación):**
-  Este es el principio arquitectónico estrella del diseño. El OCP dicta que un sistema debe permitir añadir nuevo comportamiento sin modificar el código que ya funciona y está testado.
-* *¿Cómo se habría violado?* Si hubiera usado una sola clase `EmergencyPowerSystem` para ambas partes, habría tenido que entrar a modificarla, añadiendo sentencias `if (esParteB)` para cambiar de algoritmo, arriesgándome a introducir *bugs* en la Parte A.
-* *¿Cómo lo he aplicado?* Dejé el orquestador original cerrado y a salvo en el paquete `a`. Para resolver los nuevos requisitos de los 12 dígitos, **extendí el sistema** creando un módulo completamente nuevo en el paquete `b`. De este modo, la Parte B se adapta a su nuevo algoritmo sin que la Parte A se entere siquiera de que existe.
+* **Parte A:** El sistema requiere encender exactamente **2 baterías** por banco. Al buscar solo dos elementos, un enfoque de división directa del *array* (buscar el máximo y luego buscar el segundo mayor a su derecha) parece viable, aunque se puede optimizar.
 
 
-* **Single Responsibility Principle - SRP (Principio de Responsabilidad Única):**
-  Una clase debe tener solo un motivo para cambiar. En muchos diseños mediocres, el modelo de datos también realiza las matemáticas (lo que se conoce como un "Modelo Gordo"). Yo he optado por separar responsabilidades:
-* `BatteryBank` actúa como un **Modelo Anémico**: su única responsabilidad es almacenar el texto. Solo cambiará si el formato físico de las baterías cambia.
-* `EmergencyPowerSystem` actúa como un **Servicio**: concentra toda la responsabilidad matemática. Solo cambiará si las reglas de cálculo cambian.
+* **Parte B:** La fricción exige encender exactamente **12 baterías** por banco. Esto cambia radicalmente la escala del problema, pasando de buscar un entero simple a un valor de 12 cifras (obligando al uso de enteros de 64 bits `long`). Un enfoque iterativo simple fallaría, ya que en cada paso debemos asegurarnos de que queden suficientes dígitos en la cadena para completar la cuota de 12.
 
 
-* **Don't Repeat Yourself - DRY (Evitar duplicación):**
-  A pesar de haber separado la orquestación en los paquetes `a` y `b` (por OCP), me di cuenta de que la estructura de los datos crudos era exactamente la misma. Copiar y pegar la clase `BatteryBank` en ambas carpetas habría sido un error de diseño. Por ello, la extraje a la carpeta raíz (`software.aoc.day03`), compartiendo el mismo modelo inmutable para todo el día y eliminando la redundancia.
 
-## 3. Técnicas y Patrones
+## 2. Lógica Estructural
 
-* **Patrón Creacional: Factory Method:**
-  He prohibido el uso de constructores públicos (`public BatteryBank()`) haciéndolos privados. Para instanciar los objetos, se debe pasar por el método estático `from(String rawNotes)`. Este patrón actúa como un punto de control aduanero: limpia los espacios en blanco, verifica que las cadenas no sean nulas o excesivamente cortas, y garantiza que cualquier objeto que nazca en memoria sea 100% válido desde su creación.
-* **Inmutabilidad Estricta de Colecciones:**
-  Además de hacer finales los atributos, en el Factory Method del orquestador recolecto los datos en una lista temporal, pero la inyecto al constructor utilizando `List.copyOf()`. Esto genera una colección inmutable que previene que cualquier otra clase pueda hacer un `.add()` o `.remove()` malicioso en el futuro.
-* **Algoritmos Diferenciados (Optimización de Rendimiento):**
-  Buscar el número mayor manteniendo el orden parece fácil, pero con 12 dígitos el coste computacional se dispara.
-* *Para la Parte A:* Utilizo un array precomputado de sufijos (`maxFromRight`) que me permite resolver el cruce de 2 dígitos en tiempo lineal $O(N)$.
-* *Para la Parte B:* Implemento un algoritmo **Voraz (Greedy)** apoyado en un **Stack Monotónico** (usando un `StringBuilder`). Al recorrer la secuencia, si el dígito actual es mayor que el anterior guardado, lo expulsa de la pila (siempre que me queden "vidas" o descartes disponibles). Esto resuelve el problema masivo en una sola pasada $O(N)$, siendo inmensamente más eficiente que una solución recursiva o de fuerza bruta.
+Se implementó una arquitectura basada en el patrón *Service Layer*:
 
-## 4. Paradigmas de Programación
+* **`BatteryBank` (Record):** Modelo de dominio anémico. Su única responsabilidad es almacenar la secuencia de texto inmutable y validarla.
 
-* **Patrón Service Layer (Orientación a Objetos):**
-  El software no es un script de funciones sueltas, sino un sistema real. He aplicado una arquitectura en capas donde la "Capa de Dominio" (`BatteryBank`) es inyectada en la "Capa de Servicio" (`EmergencyPowerSystem`), emulando cómo se construyen las aplicaciones empresariales reales (ej. Spring Boot).
-* **Programación Imperativa vs. Declarativa (KISS):**
-  A diferencia de la tendencia a forzar el uso de la API de *Streams* de Java (`.stream().map().reduce()`) para todo, he decidido conscientemente orquestar la separación de líneas y las sumas totales utilizando **bucles `for` estructurados tradicionales**. Esto cumple con el principio **KISS (Keep It Simple, Stupid)**. Un bucle `for` imperativo hace que el control de flujo sea obvio a simple vista y permite insertar puntos de ruptura (*breakpoints*) para depurar paso a paso sin la opacidad que generan las lambdas de los streams funcionales.
+
+* **`EmergencyPowerSystem` (Record):** Actúa como el orquestador y la capa de servicio lógico. Se encarga de procesar el texto en bruto y concentra toda la responsabilidad matemática (los algoritmos de optimización) para sumar el voltaje final.
+
+## 3. Principios de Diseño (SOLID)
+
+* **Single Responsibility Principle (SRP):** `BatteryBank` es un modelo puramente de almacenamiento (almacena y valida el texto), mientras que `EmergencyPowerSystem` asume la responsabilidad de la lógica algorítmica y orquestación del agregado, aislando las matemáticas de la topología del dato.
+
+
+* **Open/Closed Principle (OCP):** En lugar de contaminar el orquestador de la Parte A con sentencias `if(esParteB)`, se empaquetó la solución masiva de los 12 dígitos en una nueva extensión del dominio (`software.aoc.day03.b`), dejando la Parte A intacta, cerrada y a salvo.
+
+
+* **Liskov Substitution Principle (LSP) y Composition (COI):** El sistema favorece la composición (`List<BatteryBank> banks`) frente a la herencia. Al mantener una estructura plana (sin clases base con herencias), garantizamos que cualquier cambio subyacente o inyección de listas personalizadas funcionará correctamente.
+
+
+* **Interface Segregation Principle (ISP):** Exposición minimalista. `BatteryBank` expone únicamente el *getter* de su *string* (mediante el contrato nativo de un *record*), ocultando detalles de inicialización.
+* **Dependency Inversion Principle (DIP):** Las lógicas de orquestación ignoran por completo cómo se carga la información. Las pruebas unitarias de alto nivel actúan como un cliente que inyecta los `String` crudos en el constructor, desacoplando completamente el dominio algorítmico del sistema de ficheros y Entrada/Salida.
+
+## 4. Fundamentos y Clean Code
+
+* **Abstracción:** Toda la extrema complejidad algorítmica (los *Suffix Arrays* y *Monotonic Stacks*) queda encapsulada. El cliente solo llama a `calculateTotalOutputJoltage()` y obtiene su resultado.
+
+
+* **Don't Repeat Yourself (DRY):** Al notar que la entidad fundamental (la batería cruda) era idéntica para ambas lógicas, el registro `BatteryBank` se alojó en la carpeta raíz (`software.aoc.day03`), compartiendo el modelo inmutable.
+
+
+* **Law of Demeter (LoD):** En el ciclo de evaluación, `EmergencyPowerSystem` asume la responsabilidad algorítmica directamente sobre la capa transitoria que él mismo controla, sin exigir estados anidados complejos.
+
+
+* **Programación Imperativa vs Declarativa (KISS):** A diferencia de forzar la API de Streams (`reduce`, `iterate`) para algoritmos densos, se decidió orquestar la separación de los algoritmos matemáticos usando bucles `for` estructurados y control de estado imperativo (`StringBuilder`). Un bucle `for` aquí hace que el control de flujo y la complejidad espacial sean transparentes, cumpliendo con el principio **Keep It Simple, Stupid (KISS)**.
+
+
+
+## 5. Paradigmas, Técnicas y Patrones
+
+* **Patrón Creacional (Factory Method):** La instanciación de objetos está protegida mediante el método estático `from()`. Este método actúa como aduana, ejecutando saneamiento defensivo de datos (`String::trim`, verificación contra cadenas nulas o insuficientemente largas), lo que previene excepciones silenciosas.
+
+
+* **Inmutabilidad Estricta:** El modelo `BatteryBank` es un *Record* en Java, impidiendo mutaciones en su estado. Además, la lista del orquestador se blinda utilizando `List.copyOf()` (en el Día A) o directamente `.toList()`, asegurando que no se sufra corrupción de datos.
+
+
+* **Robustez y Tolerancia a Desbordamientos:** Se previó la explosión numérica al pasar de 2 a 12 cifras (Parte B), escalando los contenedores de enteros convencionales a enteros de 64 bits (`long`), mitigando proactivamente excepciones del tipo *Integer Overflow*.
+
+## 6. Verificación y Tests (BDD)
+
+Las soluciones se validan de forma automática mediante **pruebas unitarias** escritas con JUnit 5 y aserciones de AssertJ.
+
+* Los tests se estructuran semánticamente bajo la metodología **BDD (Behavior-Driven Development)** usando el patrón **Given-When-Then** (Dado un contexto, Cuando ocurre una acción, Entonces se espera un resultado).
+
+
+* **Parte A (`aTest`):** Verifica que se extraigan y maximicen matemáticamente 2 baterías (ejemplo: resultado `197`), probando la solidez del *Suffix Max Array*.
+
+
+* **Parte B (`bTest`):** Evalúa un escenario que demanda enteros masivos y la selección precisa de 12 dígitos, validando el comportamiento lineal del *Monotonic Stack* frente a cadenas problemáticas o fricción alta.
