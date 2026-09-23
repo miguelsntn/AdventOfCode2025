@@ -1,40 +1,33 @@
 package software.aoc.day03.b;
 
 import software.aoc.day03.BatteryBank;
-import java.util.ArrayList;
+
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 
-public class EmergencyPowerSystem {
+public record EmergencyPowerSystem(List<BatteryBank> banks) {
 
-    private final List<BatteryBank> banks;
     private static final int TARGET_LENGTH = 12;
 
-    private EmergencyPowerSystem(List<BatteryBank> banks) {
-        this.banks = banks;
-    }
-
     public static EmergencyPowerSystem from(String rawNotes) {
-        List<BatteryBank> parsedBanks = new ArrayList<>();
-        String[] lines = rawNotes.split("\\R");
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (!trimmed.isEmpty()) {
-                parsedBanks.add(BatteryBank.from(trimmed));
-            }
-        }
-        return new EmergencyPowerSystem(List.copyOf(parsedBanks));
+        List<BatteryBank> parsedBanks = Arrays.stream(rawNotes.split("\\R"))
+                .map(String::trim)
+                .filter(Predicate.not(String::isEmpty))
+                .map(BatteryBank::from)
+                .toList();
+
+        return new EmergencyPowerSystem(parsedBanks);
     }
 
     public long calculateTotalOutputJoltage() {
-        long totalSum = 0;
-        for (BatteryBank bank : banks) {
-            totalSum += calculateSingleBank(bank);
-        }
-        return totalSum;
+        return banks.stream()
+                .mapToLong(this::calculateSingleBank)
+                .sum();
     }
 
     private long calculateSingleBank(BatteryBank bank) {
-        String ratings = bank.getRatings();
+        String ratings = bank.ratings();
         if (ratings.length() < TARGET_LENGTH) {
             throw new IllegalArgumentException("Longitud insuficiente");
         }
@@ -45,14 +38,13 @@ public class EmergencyPowerSystem {
         for (int i = 0; i < ratings.length(); i++) {
             char currentDigit = ratings.charAt(i);
 
-            while (removeCount > 0 && stack.length() > 0 && stack.charAt(stack.length() - 1) < currentDigit) {
+            while (removeCount > 0 && !stack.isEmpty() && stack.charAt(stack.length() - 1) < currentDigit) {
                 stack.deleteCharAt(stack.length() - 1);
                 removeCount--;
             }
             stack.append(currentDigit);
         }
 
-        String bestSequence = stack.substring(0, TARGET_LENGTH);
-        return Long.parseLong(bestSequence);
+        return Long.parseLong(stack.substring(0, TARGET_LENGTH));
     }
 }
