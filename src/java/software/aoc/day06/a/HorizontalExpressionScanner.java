@@ -18,16 +18,16 @@ public class HorizontalExpressionScanner extends BaseExpressionScanner {
                 .toList();
 
         if (tokens.isEmpty()) {
-            throw new IllegalArgumentException("Bloque vacio");
+            throw new IllegalArgumentException("Bloque vacío");
         }
 
-        ArithmeticOperator operator = ArithmeticOperator.from(tokens.get(tokens.size() - 1).charAt(0));
+        ArithmeticOperator operator = ArithmeticOperator.from(tokens.getLast().charAt(0));
 
-        List<Long> operands = tokens.stream()
+        long[] operands = tokens.stream()
                 .limit(tokens.size() - 1)
-                .map(Long::parseLong)
-                .toList();
+                .mapToLong(Long::parseLong)
+                .toArray();
 
-        return new MathExpression(operands, operator);
+        return new MathExpression(operator, operands);
     }
 }

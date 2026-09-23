@@ -5,8 +5,6 @@ import software.aoc.day06.BaseExpressionScanner;
 import software.aoc.day06.MathExpression;
 
 import java.util.List;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class VerticalExpressionScanner extends BaseExpressionScanner {
@@ -22,18 +20,18 @@ public class VerticalExpressionScanner extends BaseExpressionScanner {
 
         ArithmeticOperator operator = ArithmeticOperator.from(opToken.charAt(0));
 
-        List<Long> operands = IntStream.range(start, end)
+        long[] operands = IntStream.range(start, end)
                 .mapToObj(col -> lines.stream()
                         .limit(operatorRow)
                         .filter(line -> col < line.length())
                         .map(line -> String.valueOf(line.charAt(col)))
                         .filter(str -> Character.isDigit(str.charAt(0)))
-                        .collect(Collectors.joining())
+                        .reduce("", String::concat) // Concatena los dígitos verticalmente
                 )
-                .filter(Predicate.not(String::isEmpty))
-                .map(Long::parseLong)
-                .toList();
+                .filter(str -> !str.isEmpty())
+                .mapToLong(Long::parseLong)
+                .toArray();
 
-        return new MathExpression(operands, operator);
+        return new MathExpression(operator, operands);
     }
 }

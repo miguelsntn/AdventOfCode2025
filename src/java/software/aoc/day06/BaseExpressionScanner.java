@@ -8,7 +8,7 @@ public abstract class BaseExpressionScanner implements ExpressionScanner {
     @Override
     public CalculationLedger scan(List<String> textLines) {
         if (textLines == null || textLines.isEmpty()) {
-            throw new IllegalArgumentException("El documento no puede estar vacio");
+            throw new IllegalArgumentException("El documento no puede estar vacío");
         }
 
         int maxWidth = textLines.stream().mapToInt(String::length).max().orElse(0);

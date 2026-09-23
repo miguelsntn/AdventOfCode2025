@@ -1,28 +1,23 @@
 package software.aoc.day06;
 
+import java.util.function.Function;
+import java.util.stream.LongStream;
+
 public enum ArithmeticOperator {
-    ADDITION('+'),
-    MULTIPLICATION('*');
+    ADDITION(LongStream::sum),
+    MULTIPLICATION(s -> s.reduce((a, b) -> a * b).orElse(0L));
 
-    private final char symbol;
+    private final Function<LongStream, Long> operation;
 
-    ArithmeticOperator(char symbol) {
-        this.symbol = symbol;
+    ArithmeticOperator(Function<LongStream, Long> operation) {
+        this.operation = operation;
+    }
+
+    public long apply(LongStream operands) {
+        return operation.apply(operands);
     }
 
     public static ArithmeticOperator from(char symbol) {
-        for (ArithmeticOperator op : values()) {
-            if (op.symbol == symbol) {
-                return op;
-            }
-        }
-        throw new IllegalArgumentException("Simbolo aritmetico desconocido: " + symbol);
-    }
-
-    public long apply(long a, long b) {
-        return switch (this) {
-            case ADDITION -> a + b;
-            case MULTIPLICATION -> a * b;
-        };
+        return symbol == '+' ? ADDITION : MULTIPLICATION;
     }
 }

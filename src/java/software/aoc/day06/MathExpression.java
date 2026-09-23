@@ -1,16 +1,9 @@
 package software.aoc.day06;
 
-import java.util.List;
+import java.util.Arrays;
 
-public record MathExpression(List<Long> operands, ArithmeticOperator operator) {
-
+public record MathExpression(ArithmeticOperator operator, long[] operands) {
     public long evaluate() {
-        if (operands.isEmpty()) return 0;
-
-        long result = operands.get(0);
-        for (int i = 1; i < operands.size(); i++) {
-            result = operator.apply(result, operands.get(i));
-        }
-        return result;
+        return operator.apply(Arrays.stream(operands));
     }
 }
