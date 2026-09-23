@@ -2,40 +2,37 @@ package software.aoc.day04;
 
 import java.util.List;
 
-public class PaperGrid {
-    private final char[][] grid;
-    public final int rows;
-    public final int cols;
-
-    private PaperGrid(char[][] grid) {
-        this.grid = grid;
-        this.rows = grid.length;
-        this.cols = grid.length > 0 ? grid[0].length : 0;
-    }
+public record PaperGrid(boolean[][] grid, int rows, int cols) {
 
     public static PaperGrid from(List<String> lines) {
         if (lines == null || lines.isEmpty()) {
-            throw new IllegalArgumentException("La cuadricula no puede ser nula o vacia");
+            throw new IllegalArgumentException("La cuadrícula no puede ser nula o vacía");
         }
 
-        char[][] gridState = new char[lines.size()][lines.get(0).length()];
-        for (int r = 0; r < lines.size(); r++) {
-            gridState[r] = lines.get(r).toCharArray();
+        int rows = lines.size();
+        int cols = lines.get(0).length();
+        boolean[][] parsedGrid = new boolean[rows][cols];
+
+        for (int r = 0; r < rows; r++) {
+            String line = lines.get(r);
+            for (int c = 0; c < cols; c++) {
+                parsedGrid[r][c] = line.charAt(c) == '@';
+            }
         }
 
-        return new PaperGrid(gridState);
+        return new PaperGrid(parsedGrid, rows, cols);
     }
 
     public boolean isPaperRoll(int row, int col) {
-        return grid[row][col] == '@';
+        return isValidPosition(row, col) && grid[row][col];
     }
 
-    public boolean isValidPosition(int row, int col) {
+    private boolean isValidPosition(int row, int col) {
         return row >= 0 && row < rows && col >= 0 && col < cols;
     }
 
-    public char[][] getDeepCopy() {
-        char[][] copy = new char[rows][cols];
+    public boolean[][] getMutableCopy() {
+        boolean[][] copy = new boolean[rows][cols];
         for (int r = 0; r < rows; r++) {
             System.arraycopy(grid[r], 0, copy[r], 0, cols);
         }

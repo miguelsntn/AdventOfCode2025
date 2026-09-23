@@ -1,50 +1,60 @@
 package software.aoc.day04.b;
 
 import software.aoc.day04.PaperGrid;
-import java.util.List;
-import java.util.stream.IntStream;
 
 public class PaperRollManager {
 
     public int removeAllAccessibleRolls(PaperGrid originalGrid) {
-        char[][] mutableGrid = originalGrid.getDeepCopy();
-        int rows = originalGrid.rows;
-        int cols = originalGrid.cols;
+        boolean[][] grid = originalGrid.getMutableCopy();
+        int rows = originalGrid.rows();
+        int cols = originalGrid.cols();
 
         int totalRemoved = 0;
         boolean removedInCurrentPass;
 
-        int[] dRow = {-1, -1, -1,  0, 0,  1, 1, 1};
-        int[] dCol = {-1,  0,  1, -1, 1, -1, 0, 1};
+        boolean[][] toRemove = new boolean[rows][cols];
 
         do {
-            List<int[]> rollsToRemove = IntStream.range(0, rows).boxed()
-                    .flatMap(r -> IntStream.range(0, cols)
-                            .filter(c -> mutableGrid[r][c] == '@')
-                            .filter(c -> {
-                                int adj = 0;
-                                for (int i = 0; i < 8; i++) {
-                                    int nr = r + dRow[i];
-                                    int nc = c + dCol[i];
-                                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && mutableGrid[nr][nc] == '@') {
-                                        adj++;
-                                    }
-                                }
-                                return adj < 4;
-                            })
-                            .mapToObj(c -> new int[]{r, c}))
-                    .toList();
+            removedInCurrentPass = false;
 
-            removedInCurrentPass = !rollsToRemove.isEmpty();
-
-            for (int[] pos : rollsToRemove) {
-                mutableGrid[pos[0]][pos[1]] = '.';
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (grid[r][c] && countAdjacent(grid, r, c, rows, cols) < 4) {
+                        toRemove[r][c] = true;
+                        removedInCurrentPass = true;
+                        totalRemoved++;
+                    }
+                }
             }
 
-            totalRemoved += rollsToRemove.size();
+            if (removedInCurrentPass) {
+                for (int r = 0; r < rows; r++) {
+                    for (int c = 0; c < cols; c++) {
+                        if (toRemove[r][c]) {
+                            grid[r][c] = false;
+                            toRemove[r][c] = false; // Reinicio de la máscara
+                        }
+                    }
+                }
+            }
 
         } while (removedInCurrentPass);
 
         return totalRemoved;
+    }
+
+    private int countAdjacent(boolean[][] grid, int r, int c, int rows, int cols) {
+        int count = 0;
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                if (dr == 0 && dc == 0) continue;
+                int nr = r + dr;
+                int nc = c + dc;
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc]) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 }
