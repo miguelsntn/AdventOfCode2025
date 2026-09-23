@@ -3,7 +3,6 @@ package software.aoc.day05.b;
 import software.aoc.day05.FreshRange;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collector;
 
 public class InventorySystem {
     private final List<FreshRange> sortedRanges;
@@ -27,34 +26,30 @@ public class InventorySystem {
     }
 
     public long countTotalFreshCapacity() {
-        return sortedRanges.stream()
-                .collect(mergeOverlappingRanges())
-                .stream()
-                .mapToLong(FreshRange::size)
-                .sum();
-    }
+        if (sortedRanges.isEmpty()) {
+            return 0;
+        }
 
-    private Collector<FreshRange, List<FreshRange>, List<FreshRange>> mergeOverlappingRanges() {
-        return Collector.of(
-                ArrayList::new,
-                (mergedList, currentRange) -> {
-                    if (mergedList.isEmpty()) {
-                        mergedList.add(currentRange);
-                    } else {
-                        int lastIndex = mergedList.size() - 1;
-                        FreshRange lastRange = mergedList.get(lastIndex);
+        List<FreshRange> mergedRanges = new ArrayList<>();
+        FreshRange currentRange = sortedRanges.get(0);
 
-                        if (lastRange.connectsWith(currentRange)) {
-                            mergedList.set(lastIndex, lastRange.merge(currentRange));
-                        } else {
-                            mergedList.add(currentRange);
-                        }
-                    }
-                },
-                (list1, list2) -> {
-                    list1.addAll(list2);
-                    return list1;
-                }
-        );
+        for (int i = 1; i < sortedRanges.size(); i++) {
+            FreshRange nextRange = sortedRanges.get(i);
+
+            if (currentRange.connectsWith(nextRange)) {
+                currentRange = currentRange.merge(nextRange);
+            } else {
+                mergedRanges.add(currentRange);
+                currentRange = nextRange;
+            }
+        }
+        mergedRanges.add(currentRange);
+
+        long totalCapacity = 0;
+        for (FreshRange range : mergedRanges) {
+            totalCapacity += range.size();
+        }
+
+        return totalCapacity;
     }
 }
