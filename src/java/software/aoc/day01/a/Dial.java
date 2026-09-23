@@ -1,35 +1,22 @@
 package software.aoc.day01.a;
 
-public class Dial {
-    private final int currentPosition;
-    private final int zerosCount;
+import software.aoc.day01.Order;
 
-    private Dial(int currentPosition, int zerosCount) {
-        this.currentPosition = currentPosition;
-        this.zerosCount = zerosCount;
-    }
+public record Dial(int position, int zerosCount) {
 
     public static Dial createStartingAt(int position) {
         return new Dial(position, 0);
     }
 
-    public Dial applyOrder(Order order) {
-        int newPosition = this.currentPosition;
+    public Dial apply(Order order) {
+        int step = order.direction().equals("L") ? -order.distance() : order.distance();
 
-        if ("L".equals(order.getDirection())) {
-            newPosition = (newPosition - order.getDistance()) % 100;
-            if (newPosition < 0) {
-                newPosition += 100;
-            }
-        } else if ("R".equals(order.getDirection())) {
-            newPosition = (newPosition + order.getDistance()) % 100;
+        int newPosition = (this.position + step) % 100;
+        if (newPosition < 0) {
+            newPosition += 100;
         }
 
-        int newZerosCount = this.zerosCount + (newPosition == 0 ? 1 : 0);
-        return new Dial(newPosition, newZerosCount);
-    }
-
-    public int getZerosCount() {
-        return zerosCount;
+        int newZeros = this.zerosCount + (newPosition == 0 ? 1 : 0);
+        return new Dial(newPosition, newZeros);
     }
 }

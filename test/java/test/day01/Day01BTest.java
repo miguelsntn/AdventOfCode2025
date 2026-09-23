@@ -26,7 +26,7 @@ public class Day01BTest {
 
     @Test
     public void should_decode_password_correctly_for_part_b() {
-        Stream<String> document = EXAMPLE_ORDERS.lines().filter(line -> !line.isBlank());
+        Stream<String> document = EXAMPLE_ORDERS.lines();
 
         long password = SafeDecoder.decodePassword(document);
 
@@ -39,7 +39,7 @@ public class Day01BTest {
 
         try (Stream<String> document = Files.lines(inputPath)) {
 
-            long realPassword = SafeDecoder.decodePassword(document.filter(line -> !line.isBlank()));
+            long realPassword = SafeDecoder.decodePassword(document);
 
             System.out.println("La respuesta al rompecabezas es: " + realPassword);
 

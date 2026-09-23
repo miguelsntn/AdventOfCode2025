@@ -1,49 +1,28 @@
 package software.aoc.day01.b;
 
-public class Dial {
-    private final int currentPosition;
-    private final long zerosCount;
+import software.aoc.day01.Order;
 
-    private Dial(int currentPosition, long zerosCount) {
-        this.currentPosition = currentPosition;
-        this.zerosCount = zerosCount;
-    }
+public record Dial(int position, long zerosCount) {
 
     public static Dial createStartingAt(int position) {
         return new Dial(position, 0L);
     }
 
-    public Dial applyOrder(Order order) {
-        int newPosition = this.currentPosition;
-        long newZerosCount = this.zerosCount;
-        int dist = order.getDistance();
+    public Dial apply(Order order) {
+        int dist = order.distance();
 
-        if ("L".equals(order.getDirection())) {
-            int distToZero = (this.currentPosition == 0) ? 100 : this.currentPosition;
+        int distToZero = order.direction().equals("L")
+                ? (this.position == 0 ? 100 : this.position)
+                : (this.position == 0 ? 100 : 100 - this.position);
 
-            if (dist >= distToZero) {
-                newZerosCount += 1 + (dist - distToZero) / 100;
-            }
+        long crossings = (dist >= distToZero) ? 1 + (dist - distToZero) / 100 : 0;
 
-            newPosition = (this.currentPosition - dist) % 100;
-            if (newPosition < 0) {
-                newPosition += 100;
-            }
-
-        } else if ("R".equals(order.getDirection())) {
-            int distToZero = (this.currentPosition == 0) ? 100 : 100 - this.currentPosition;
-
-            if (dist >= distToZero) {
-                newZerosCount += 1 + (dist - distToZero) / 100;
-            }
-
-            newPosition = (this.currentPosition + dist) % 100;
+        int step = order.direction().equals("L") ? -dist : dist;
+        int newPosition = (this.position + step) % 100;
+        if (newPosition < 0) {
+            newPosition += 100;
         }
 
-        return new Dial(newPosition, newZerosCount);
-    }
-
-    public long getZerosCount() {
-        return zerosCount;
+        return new Dial(newPosition, this.zerosCount + crossings);
     }
 }
