@@ -1,52 +1,38 @@
 # Day 4: Printing Department
 
-### Parte A
+## 1. Diferencias entre la Parte A y la Parte B
 
-Analizar el plano bidimensional del departamento de impresión para localizar los grandes rollos de papel (`@`). Una carretilla elevadora (forklift) solo puede acceder a un rollo si este tiene menos de 4 rollos adyacentes a su alrededor (considerando las 8 direcciones posibles, es decir, vecindad de Moore). El objetivo es contar cuántos rollos son directamente accesibles en el estado estático inicial de la fábrica.
+El salto de complejidad entre ambas partes representa la transición clásica de una simple consulta espacial a un motor de simulación continua:
 
-### Parte B
+* **Parte A (Evaluación Estática):** El problema consiste en analizar el plano bidimensional estático del departamento de impresión para localizar grandes rollos de papel (`@`). Un rollo es accesible si tiene estrictamente menos de 4 rollos adyacentes a su alrededor (en su vecindad de Moore). El objetivo es devolver el conteo estático inicial.
+* **Parte B (Autómata Celular Dinámico):** El reto evoluciona hacia una simulación iterativa por oleadas. Al retirar los rollos accesibles, se despeja el camino y rollos que estaban bloqueados en el interior pueden volverse accesibles en el siguiente turno. El objetivo es calcular el total histórico de rollos retirados hasta que la fábrica se queda estancada. Esto exige transicionar estados temporalmente sin que las eliminaciones prematuras de un turno corrompan los cálculos de los vecinos en ese mismo ciclo.
 
-El reto evoluciona hacia una **simulación de autómata celular iterativo**. Al retirar los rollos accesibles, se despeja el camino y rollos que estaban bloqueados en el interior pueden volverse accesibles en las siguientes oleadas. El objetivo es calcular el total histórico de rollos retirados de la matriz hasta que la fábrica se queda estancada (no quedan rollos accesibles).
+## 2. Lógica Estructural
 
-## Lógica Estructural
+Para evitar el desastroso *Memory Churn* (saturación de la memoria dinámica) que sufren las implementaciones que instancian miles de objetos para representar coordenadas, se diseñó una arquitectura de alto rendimiento basada en tipos primitivos:
 
-* **`PaperGrid` (Modelo Inmutable Compartido)**: Representación de la cuadrícula en la capa de dominio. Actúa exclusivamente como un entorno de datos protegido. Procesa las listas de texto de entrada, valida los límites de la matriz bidimensional y expone métodos de consulta (`isPaperRoll`, `isValidPosition`).
-* **`PaperRollManager` (A y B) (Capa de Servicio)**: Orquesta la lógica de negocio. Recibe el `PaperGrid` por inyección de dependencias y aplica las restricciones matemáticas de accesibilidad de los elfos.
+* **`PaperGrid` (Modelo de Dominio Protegido):** Representación inmutable de la cuadrícula. Actúa exclusivamente como un entorno de datos blindado. Procesa el texto de entrada convirtiéndolo a una matriz primitiva hiperligera (`boolean[][]`), valida los límites espaciales y expone métodos de consulta (`isPaperRoll`).
+* **`PaperRollManager` (Capa de Servicio Orquestadora):** Centraliza la lógica de negocio y la algoritmia espacial. Recibe el `PaperGrid` por inyección, calcula las adyacencias mediante vectores primitivos y ejecuta la mutación o el conteo.
 
-## Algoritmos
+## 3. Principios de Diseño (SOLID)
 
-* **Vectores de Desplazamiento Espacial (Optimización)**: Para calcular los vecinos de Moore, se descarta la costosa creación de objetos "Coordenada". En su lugar, se utilizan dos arreglos unidimensionales primitivos (`dRow = {-1, -1, ...}`, `dCol`) para iterar sobre las 8 direcciones.
-* **Simulación Iterativa por Oleadas (Autómata Celular)**: En lugar de usar recursividad pura (que satura la pila de llamadas), la Parte B se ejecuta mediante un ciclo estructurado `do-while`. En cada pasada, se genera una fotografía del estado actual, se calculan en bloque (mediante Streams) los candidatos a eliminar, y solo al final del ciclo se aplica la eliminación en la matriz mediante copias mutables.
+* **Single Responsibility Principle (SRP):** Hemos dividido el diseño eliminando cualquier "Modelo Gordo". El entorno (`PaperGrid`) cambia solo si lo hace el formato de lectura o las dimensiones del mapa. El actor de extracción (`PaperRollManager`) cambiará únicamente si las reglas físicas o matemáticas de acceso a los rollos se actualizan.
+* **Open/Closed Principle (OCP):** El algoritmo de conteo estático (Parte A) y el de destrucción por oleadas (Parte B) son radicalmente distintos. Para no contaminar el código original con sentencias `if(esParteB)`, el paquete `a` queda cerrado a alteraciones. Las nuevas capacidades del autómata celular extienden el sistema en un paquete `b` completamente nuevo.
+* **Liskov Substitution Principle (LSP) y Composición (COI):** El modelo no hereda de estructuras complejas ni de colecciones pesadas; compone su estado internamente mediante una matriz nativa (`boolean[][]`), garantizando un comportamiento predecible y aislando las reglas espaciales propias.
+* **Interface Segregation Principle (ISP):** Exposición mínima requerida. `PaperGrid` no expone *getters* de su matriz interna para no vulnerar el estado. Cuando la simulación destructiva requiere alterar el terreno, el cliente está obligado a llamar a `getMutableCopy()`, recibiendo un clon aislado.
+* **Dependency Inversion Principle (DIP):** El orquestador `PaperRollManager` desconoce cómo se genera el mapa desde el archivo de texto. Solo depende de recibir un objeto `PaperGrid` completamente formado por inyección de dependencias.
 
-## Fundamentos
+## 4. Fundamentos, Técnicas y Patrones
 
-* **Abstracción** *(Simplificación de detalles complejos mediante contratos claros)*: La clase de servicio `PaperRollManager` expone métodos abstractos de muy alto nivel como `countAccessibleRolls()` y `removeAllAccessibleRolls()`. Las clases de Test (clientes) ignoran por completo los vectores de desplazamiento espaciales y las copias profundas que ocurren por debajo.
-* **Encapsulamiento** *(Protección del estado interno)*: La cuadrícula bidimensional `char[][] grid` es privada y final. Durante la destructiva simulación de la Parte B, el servicio invoca el método `getDeepCopy()` del `PaperGrid` para obtener un clon seguro, garantizando que ninguna otra clase pueda corromper el modelo original en memoria.
-* **Modularidad** *(División en módulos bien definidos e independientes)*: Se aísla por completo el modelo físico del terreno (`PaperGrid`) del gestor de reglas de extracción (`PaperRollManager`), permitiendo testearlos por separado.
-* **Alta Cohesión y Bajo Acoplamiento**: Existe alta cohesión porque `PaperGrid` maneja exclusivamente la topología bidimensional y `PaperRollManager` las matemáticas espaciales. El acoplamiento es mínimo: el gestor solo depende de métodos booleanos de consulta públicos expuestos por el mapa.
+* **Double Buffering (Máscara de Eliminación) vs. Sobreingeniería Funcional:** Mientras que enfoques ingenuos utilizan `Streams` y encapsulan cada celda en objetos tipo `Coordinate`, instanciando millones de objetos iterables en la memoria *Heap* durante los bucles de simulación, aquí se priorizó el hardware. Se utilizó la técnica de **Double Buffering** asignando una máscara temporal (`boolean[][] toRemove`). Durante el ciclo, se marcan a nivel de bits los rollos a destruir, y al final del ciclo se aplica la mutación global. **Las instanciaciones dinámicas (creación de objetos nuevos con `new`) dentro del ciclo repetitivo de la simulación son exactamente 0**, erradicando las pausas del *Garbage Collector*.
+* **Vectores de Desplazamiento Espacial:** Para calcular los vecinos de Moore, se utilizan dos arreglos unidimensionales primitivos (`dRow = {-1, -1, ...}`, `dCol`) para iterar sobre las 8 direcciones en tiempo constante.
+* **Keep It Simple, Stupid (KISS):** Equilibrio perfecto entre paradigmas. La recolección de alto nivel fluye mediante `IntStream.range` (Programación Funcional), pero el cálculo intensivo espacial dentro de los filtros se resuelve de forma estructurada e imperativa para garantizar un rendimiento óptimo.
+* **Factory Method (Patrón Creacional):** `PaperGrid.from()` actúa como una factoría y aduana. Aísla la conversión del texto a matriz y ejecuta una sanitización defensiva, protegiendo al sistema de matrices irregulares o entradas nulas.
 
-## Principios de Diseño
+## 5. Verificación y Tests (BDD)
 
-* **SOLID**
-* **Single Responsibility Principle (SRP)** *(Un único motivo para cambiar)*: Hemos dividido el diseño para que el modelo `PaperGrid` cambie solo si lo hace el formato de lectura de la fábrica, mientras que el actor `PaperRollManager` cambiará si las reglas de acceso numérico se actualizan. No existe un "Modelo Gordo".
-* **Open/Closed Principle (OCP)** *(Abierto a la extensión, cerrado a la modificación)*: El algoritmo de conteo estático (Parte A) y el de destrucción por oleadas (Parte B) son radicalmente distintos. Para respetar el OCP, el paquete original `a` queda cerrado a alteraciones. Se crea un nuevo `PaperRollManager` adaptado en el paquete `b` para extender las capacidades del sistema.
+Las soluciones se validan de forma automatizada mediante pruebas unitarias escritas con **JUnit 5** y **AssertJ**, garantizando la robustez geométrica antes de procesar los ficheros reales.
 
-
-* **Don't Repeat Yourself (DRY)** *(Evitar la duplicación)*: El modelo geométrico inmutable `PaperGrid` y su instanciación se extrajeron al paquete raíz `software.aoc.day04`, sirviendo de base estandarizada para ambas partes.
-* **Keep It Simple, Stupid (KISS) & You Aren't Gonna Need It (YAGNI)** *(Simplicidad)*: En lugar de construir un motor recursivo complejo y abstraer cada celda en un objeto, se utilizó un enfoque directo y performante apoyado en primitivos para el manejo de las coordenadas espaciales.
-
-## Técnicas
-
-* **Copias Defensivas (Defensive Copying)**: En la simulación (Parte B), en lugar de exponer y mutar directamente los arrays internos de la clase, se retorna una matriz clonada (`Deep Copy`).
-* **Inyección de Dependencias**: El orquestador `PaperRollManager` no asume la responsabilidad de crear o instanciar la cuadrícula; simplemente recibe el `PaperGrid` por parámetro en su método principal (`removeAllAccessibleRolls(PaperGrid originalGrid)`), desacoplando la lógica de negocio de la lectura en disco.
-* **Good Naming**: Nombres claros de consulta y ejecución como `isValidPosition`, `isPaperRoll` y `removeAllAccessibleRolls`.
-
-## Patrones de Diseño
-
-* **Factory Method (Creacional)**: La clase `PaperGrid` utiliza el método estático `from(List<String> lines)` para aislar la validación de entrada nula/vacía y la conversión masiva de texto a arreglos de caracteres bidimensionales.
-
-## Paradigmas 
-
-* **Orientación a Objetos (Capa de Servicio)**: El sistema implementa un patrón "Service Layer", donde el estado protegido (`PaperGrid`) transita hacia actores lógicos (`PaperRollManager`), aislando cada responsabilidad.
-* **Programación Funcional **: El flujo primario se modela utilizando la API de Streams de Java. El uso de `IntStream.range`, `flatMap`, `filter` y `mapToObj` permite recolectar los rollos de forma fluida y declarativa, elevando la limpieza del código.
-* **Programación Imperativa Estructurada **: Dentro de los filtros funcionales, el cálculo espacial intensivo de los vecinos se resuelve de forma puramente imperativa (con arreglos de desplazamiento primitivos). Esto logra un equilibrio perfecto: legibilidad funcional en el alto nivel y rendimiento extremo (cero creaciones de objetos en memoria) en el bajo nivel algorítmico.
+* Se sigue el patrón semántico **Given-When-Then** heredado del **Behavior-Driven Development (BDD)**, lo que transforma las pruebas en documentación viva del sistema.
+* **Test de la Parte A:** Asegura que el conteo estático con vecindad de Moore calcule correctamente las adyacencias sin arrojar excepciones de desbordamiento en los bordes de la matriz (`IndexOutOfBoundsException`).
+* **Test de la Parte B:** Valida que el motor de *Double Buffering* respete el estado temporal de la generación actual. Asegura que retirar un rollo en el cuadrante superior izquierdo no afecte indebidamente el cálculo de accesibilidad de su vecino adyacente dentro de la misma oleada de eliminación.
