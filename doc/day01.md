@@ -1,34 +1,104 @@
-# Día 1: La Entrada Secreta (Caja Fuerte)
+# Día 1: La Entrada Secreta
 
 El problema nos pide descifrar la verdadera contraseña de una caja fuerte calculando cuántas veces el dial apunta al 0 al seguir una secuencia de instrucciones de rotación.
 
-* **En la Parte A**, la regla matemática es simple: solo contamos las veces que el dial *termina* su movimiento exactamente en el 0.
-* **En la Parte B**, la complejidad matemática aumenta drásticamente: hay que llevar un registro de cada vez que el dial *cruza o pasa por* el 0 durante el transcurso del propio movimiento, calculando las distancias intermedias.
+## 1. Diferencias entre la Parte A y la Parte B
+
+La evolución de los requisitos entre ambas partes ilustra la flexibilidad y resiliencia del diseño original:
+
+* **Parte A (Paradas Estáticas):** La regla matemática es simple; solo contabilizamos las veces que el dial *termina* su movimiento y se detiene exactamente en el 0 al final de cualquier rotación.
 
 
-## 1. Fundamentos de la Ingeniería del Software
-
-* **Abstracción (Simplificación de la complejidad):** He aplicado este fundamento en la clase `Dial`, la cual expone un único método público llamado `applyOrder(Order order)`. Este método actúa como un contrato claro. El orquestador que usa esta clase no necesita saber nada sobre cómo se calculan las operaciones de módulo matemático (`% 100`), cómo se reajustan los valores negativos, ni cómo se calculan las distancias hasta el cero. Toda esa complejidad algorítmica está abstraída; el cliente simplemente le dice al dial "aplica esta orden" y recibe el resultado.
-* **Encapsulamiento (Protección de la integridad del estado):** Para garantizar que el programa sea robusto, los atributos internos de las clases (`currentPosition` y `zerosCount` en `Dial`; `direction` y `distance` en `Order`) están declarados como `private final`. Con esto logro un blindaje total del estado interno: ninguna otra clase desde fuera puede sobrescribir una posición o alterar un contador directamente, previniendo así errores de estado inconsistente.
-* **Modularidad (División estratégica del sistema):** El sistema no es un bloque monolítico de código. He dividido el problema en piezas independientes y reutilizables. Por un lado, la clase `Order` se encarga exclusivamente de interpretar el texto (como `"L5"`). Por otro, la clase `Dial` maneja las físicas de la caja fuerte. Si mañana decido reutilizar la clase `Order` para otro problema del Advent of Code, puedo llevarme el archivo sin arrastrar dependencias innecesarias.
-* **Alta Cohesión y Bajo Acoplamiento:**
-* *Alta cohesión:* Cada clase hace una sola cosa y la hace muy bien. `Order` cohesiona los datos de una instrucción. `Dial` cohesiona la lógica de rotación.
-* *Bajo acoplamiento:* El `Dial` ignora por completo si los datos vinieron de un archivo `.txt`, de una base de datos o de un input manual. Solo depende de recibir un objeto `Order` válido, lo que hace que los componentes sean altamente intercambiables.
+* **Parte B (Cruces Dinámicos):** La complejidad aumenta mediante el método 0x434C49434B, exigiendo contabilizar cada vez que el dial cruza o pasa por el 0 durante el transcurso del propio movimiento. Como una rotación puede tener una magnitud inmensa (ej. R1000), el sistema calcula matemáticamente cuántas vueltas completas se han dado en un solo movimiento, siendo la contraseña final la suma de todas estas intersecciones.
 
 
 
-## 2. Principios de Diseño (SOLID y Clean Code)
+## 2. Lógica Estructural
 
-* **Good Naming (Código Expresivo y Auto-documentado):** En lugar de llenar el código de comentarios explicando qué hace cada bloque, he invertido esfuerzo en dar nombres precisos y semánticos. Nombres de métodos como `createStartingAt(50)`, `fromString(line)`, y `applyOrder(order)` permiten que el código se lea casi como lenguaje natural (inglés). Si el código es expresivo, los comentarios explicando "el qué" sobran.
-* **Single Responsibility Principle - SRP (Principio de Responsabilidad Única):** Mi diseño garantiza que cada clase tenga un único motivo para cambiar. Si mañana los elfos deciden cambiar el formato del texto de las instrucciones (por ejemplo, pasar de `"L5"` a `"Left-5"`), la única clase que sufrirá modificaciones será `Order`. Por el contrario, si cambian las reglas matemáticas de cómo gira la caja fuerte, solo se modificará la clase `Dial`.
-* **Open/Closed Principle - OCP (Abierto a la extensión, cerrado a la modificación):** Este es el principio más evidente de mi arquitectura. Al pasar de la Parte A a la Parte B, las reglas de conteo cambiaron radicalmente. En lugar de llenar mi clase original con código condicional , lo que rompería el OCP y ensuciaría el código, decidí empaquetar la solución en directorios separados (`software.aoc.day01.a` y `software.aoc.day01.b`). Mantuve el código de la Parte A cerrado y a salvo, y creé una extensión del dominio en la Parte B para alojar las nuevas reglas.
+El sistema huye de la obsesión por los tipos primitivos modelando objetos del dominio real, dividiendo el programa en módulos bien definidos.
 
-## 3. Técnicas y Patrones de Diseño
+* **Order / Rotation:** Es el modelo de datos común e inmutable. Su única responsabilidad es interpretar las órdenes en formato de texto crudo (ej. "L50") y encapsular la magnitud y la dirección matemática del movimiento.
 
-* **Patrón Creacional: Factory Method:** He evitado deliberadamente el uso de constructores públicos (`new Order()`). En su lugar, los constructores son privados y he expuesto métodos de factoría estáticos (`Order.fromString()` y `Dial.createStartingAt()`). Esto me permite un control absoluto sobre la instanciación. En el caso de `Order.fromString`, el método actúa como un guardián: valida que el string no sea nulo, que no esté vacío y que tenga el formato correcto antes de permitir que el objeto se asigne en memoria.
-* **Inmutabilidad del Modelo (Clases Inmutables):** Esta es una de las decisiones técnicas más fuertes del proyecto. Mi clase `Dial` no tiene *setters*. Cuando se invoca el método `applyOrder`, la posición del dial actual no muta. En su lugar, el algoritmo calcula los nuevos valores y devuelve un `new Dial(nuevaPosicion, nuevoConteo)`. Trabajar con objetos inmutables elimina por completo los *side effects* (efectos secundarios) y las fugas de datos, haciendo que el rastreo de errores sea infinitamente más sencillo.
 
-## 4. Paradigmas de Programación
+* **Dial:** Representa el estado inmutable de la rueda de la caja fuerte, guardando la posición actual y la puntuación acumulada. Se encarga exclusivamente de orquestar la matemática de las rotaciones circulares y transicionar a un nuevo estado, ocultando las fórmulas internas al exterior.
 
-* **Paradigma de Orientación a Objetos (OO):** He huido de la "obsesión por los tipos primitivos". En lugar de manejar las instrucciones manipulando arrays de strings en crudo o variables sueltas, he elevado los conceptos del problema a objetos de dominio reales. El dial y las órdenes existen como entidades modeladas con estado protegido y comportamiento restringido.
-* **Acercamiento al Paradigma Funcional:** Aunque Java es un lenguaje predominantemente orientado a objetos, el diseño de la clase `Dial` bebe directamente de la programación funcional. Al hacer que el método `applyOrder` devuelva siempre una copia nueva del estado en lugar de modificar variables globales, el método se comporta como una **función pura**. Esto garantiza que si le paso la misma instrucción al mismo estado inicial, siempre producirá exactamente el mismo resultado nuevo, sin depender de estados externos ocultos.
+
+* **SafeDecoder:** Actúa exclusivamente como orquestador del flujo. Se encarga de procesar el documento completo, aplicando las rotaciones al dial de forma secuencial mediante el uso de flujos.
+
+
+
+## 3. Fundamentos de la Ingeniería del Software
+
+* **Abstracción:** `SafeDecoder` interactúa exclusivamente con el contrato público de `Dial` mediante su método de aplicación, abstrayéndose por completo de los detalles matemáticos de cómo se realiza el giro, las operaciones de módulo o el reajuste de valores negativos.
+
+
+* **Encapsulamiento:** Para garantizar la integridad, los atributos internos de las clases están protegidos (`private final`) y toda la matemática compleja está oculta dentro de `Dial`. El exterior no tiene acceso a sus variables directamente, previniendo errores de estado inconsistente.
+
+
+* **Modularidad y Acoplamiento nulo:** El `Dial` es completamente agnóstico al formato de texto del input, protegiendo la lógica central de cambios externos y logrando que los componentes sean altamente intercambiables.
+
+
+* **Tell, Don't Ask & Ley de Demeter (LoD):** Se ha invertido el flujo de control para proteger la encapsulación, ordenando al dial ejecutar la rotación en lugar de extraer sus componentes internos para recalcular la lógica por fuera.
+
+
+* **KISS, YAGNI y DRY:** La lógica común se comparte para evitar duplicación (DRY), y el modelado se limita exclusivamente a resolver el reto mediante estructuras simples de Java, sin añadir sobrediseño preventivo.
+
+
+* **Código Expresivo (Good Naming):** Se utilizan nombres semánticos precisos alineados al dominio que permiten que el código se lea casi como lenguaje natural, aislando el "qué hace" del "cómo lo hace" y haciendo innecesarios los comentarios explicativos.
+
+
+
+## 4. Principios de Diseño (SOLID)
+
+* **Single Responsibility Principle (SRP):** Cada clase tiene un único motivo para cambiar. El modelo de rotación se encarga de analizar strings, el dial gestiona el estado matemático, y el decodificador orquesta el flujo.
+
+
+* **Open/Closed Principle (OCP):** En lugar de llenar la clase original de código condicional al cambiar las reglas en la Parte B, se mantuvo el código cerrado y se empaquetó la solución en extensiones separadas del dominio. Asimismo, el orquestador está abierto a procesar datos de cualquier fuente sin modificar su código interno.
+
+
+* **Liskov Substitution Principle (LSP):** El diseño asegura que las clases consumidoras desconocen absolutamente la implementación matemática subyacente. Solo dependen de contratos estables, garantizando una alta cohesión y permitiendo escalar el sistema sin alterar la lógica de las capas superiores.
+
+
+* **Interface Segregation Principle (ISP):** Las clases exponen APIs minimalistas con un contrato claro. El orquestador interactúa únicamente con métodos imprescindibles, sin verse forzado a conocer o depender de comportamientos que no necesita utilizar.
+
+
+* **Dependency Inversion Principle (DIP):** El decodificador no se acopla a clases concretas de lectura de ficheros de disco, sino que depende de la abstracción genérica `Stream<String>` nativa de Java, lo que permite inyectar dependencias y aislar el entorno.
+
+
+
+## 5. Técnicas y Patrones de Diseño
+
+* **Patrón Creacional (Factory Method):** Se oculta la lógica de instanciación utilizando constructores privados y métodos estáticos dedicados. Estos actúan como guardianes que validan y traducen la entrada de texto antes de permitir que un objeto válido exista en memoria.
+
+
+* **Inmutabilidad del Modelo:** El sistema está libre de efectos secundarios (*side-effects*) al utilizar *Records* nativos y estados que no mutan. Todo método de rotación devuelve siempre una nueva instancia en lugar de alterar variables globales, facilitando pruebas aisladas.
+
+
+* **Inyección de Dependencias e Inversión del Control (IoC):** La fuente de datos se inyecta por parámetro, delegando el control de los bucles (iteración interna) y la procedencia de la información al exterior.
+
+
+* **Aritmética Modular y Complejidad Ciclomática Nula:** Se simula la naturaleza circular del dial usando aritmética de módulos (`% 100`) y fórmulas de compensación, lo que evita desbordamientos en índices negativos y erradica por completo la necesidad de sentencias condicionales anidadas (`if/else`).
+
+
+* **Sustitución de Condicionales por Polimorfismo / Patrón Strategy:** Se aplican estrategias (como el uso de enumerados o inyección matemática) para delegar el comportamiento del giro matemático sin depender de interruptores de control condicionales.
+
+
+
+## 6. Paradigmas de Programación
+
+* **Orientación a Objetos (OO):** El software se organiza elevando los conceptos abstractos a objetos del mundo real que encapsulan estrictamente su estado y su comportamiento.
+
+
+* **Programación Funcional y Declarativa:** Se sustituye la iteración imperativa clásica por la API `Stream` de Java, logrando flujos puramente inmutables. El uso de *Fluent APIs*, operaciones de filtrado y closures (lambdas que capturan limpiamente variables de su entorno) permite operaciones sin estado global mutable.
+
+
+
+## 7. Verificación y Tests
+
+* Las soluciones se validan de forma automática mediante pruebas unitarias escritas con la tecnología JUnit 5 y aserciones de AssertJ.
+
+
+* Los tests se estructuran semánticamente siguiendo la metodología BDD (Behavior-Driven Development) bajo el patrón **Given-When-Then** (Dado un contexto, Cuando ocurre una acción, Entonces se espera un resultado).
+
+
+* Esta estructura orienta las pruebas a comprobar el comportamiento del sistema, maximizando su legibilidad y sirviendo como validación robusta para las paradas estáticas de la Parte A y las intersecciones de la Parte B.
