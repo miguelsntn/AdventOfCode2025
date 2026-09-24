@@ -4,46 +4,46 @@ import software.aoc.day10.MachineBlueprint;
 import software.aoc.day10.MachineOptimizer;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class LightOptimizer implements MachineOptimizer {
 
     @Override
     public long calculateMinimumPresses(MachineBlueprint blueprint) {
-        long targetState = 0;
-        List<Integer> lights = blueprint.lightTargets();
-        for (int i = 0; i < lights.size(); i++) {
-            if (lights.get(i) == 1) {
-                targetState |= (1L << i);
-            }
-        }
+        int numButtons = blueprint.buttons().size();
 
-        long[] buttonMasks = new long[blueprint.buttons().size()];
-        for (int i = 0; i < blueprint.buttons().size(); i++) {
-            long mask = 0;
-            for (int bit : blueprint.buttons().get(i)) {
-                mask |= (1L << bit);
-            }
-            buttonMasks[i] = mask;
-        }
+        long targetMask = buildMask(blueprint.lightTargets());
+        long[] buttonMasks = blueprint.buttons().stream()
+                .mapToLong(this::buildMaskFromIndices)
+                .toArray();
 
-        int result = findMinPresses(buttonMasks, targetState, 0, 0L, 0, Integer.MAX_VALUE);
-        if (result == Integer.MAX_VALUE) {
-            throw new IllegalStateException("No se encontro solucion para la configuracion de luces.");
-        }
-        return result;
+        return IntStream.range(0, 1 << numButtons)
+                .filter(mask -> matchesTarget(mask, buttonMasks, targetMask))
+                .map(Integer::bitCount)
+                .min()
+                .orElseThrow(() -> new IllegalStateException("No se encontró solución."));
     }
 
-    private int findMinPresses(long[] buttons, long targetState, int index, long currentState, int presses, int bestSoFar) {
-        if (presses >= bestSoFar) return bestSoFar;
-
-        if (index == buttons.length) {
-            return (currentState == targetState) ? presses : bestSoFar;
+    private boolean matchesTarget(int mask, long[] buttonMasks, long targetMask) {
+        long currentMask = 0;
+        for (int i = 0; i < buttonMasks.length; i++) {
+            if ((mask & (1 << i)) != 0) {
+                currentMask ^= buttonMasks[i];
+            }
         }
+        return currentMask == targetMask;
+    }
 
-        bestSoFar = findMinPresses(buttons, targetState, index + 1, currentState, presses, bestSoFar);
+    private long buildMask(List<Integer> bits) {
+        return IntStream.range(0, bits.size())
+                .filter(i -> bits.get(i) == 1)
+                .mapToLong(i -> 1L << i)
+                .reduce(0L, (a, b) -> a | b);
+    }
 
-        bestSoFar = findMinPresses(buttons, targetState, index + 1, currentState ^ buttons[index], presses + 1, bestSoFar);
-
-        return bestSoFar;
+    private long buildMaskFromIndices(List<Integer> indices) {
+        return indices.stream()
+                .mapToLong(i -> 1L << i)
+                .reduce(0L, (a, b) -> a | b);
     }
 }
