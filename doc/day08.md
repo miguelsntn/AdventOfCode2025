@@ -1,61 +1,44 @@
-# Day 8: Playground
+# Día 8: Playground
 
-El desafío de hoy se sitúa en un entorno tridimensional donde se debe conectar cajas de conexiones eléctricas utilizando la menor cantidad de cable posible. Esto se traduce en un problema clásico de grafos: la construcción de un Árbol de Expansión Mínima (Minimum Spanning Tree - MST).
-En la Parte A, detenemos la construcción tras un número límite de conexiones para analizar los sub-circuitos resultantes. En la Parte B, el objetivo algorítmico cambia a unificar completamente la red hasta formar un único circuito continuo.
+El desafío de hoy se sitúa en un entorno tridimensional donde se debe conectar cajas de conexiones eléctricas utilizando la menor cantidad de cable posible. Esto se traduce en un problema clásico de Teoría de Grafos: la construcción de un **Árbol de Expansión Mínima (Minimum Spanning Tree - MST)**.
 
-## Fundamentos de la Ingeniería del Software
+## 1. Diferencias entre la Parte A y la Parte B
 
-* **Abstracción:** Consiste en ocultar los detalles complejos detrás de una interfaz simple. Hemos creado la interfaz `NetworkTracker` para que los ejecutores de alto nivel ignoren por completo la complejidad de los arreglos matemáticos subyacentes de la estructura *Union-Find*.
+La evolución algorítmica del problema exige escalar desde un análisis estático de clústeres hacia una unificación total de la red:
 
+* **Parte A:** Construimos el árbol deteniéndonos tras un número límite de conexiones (1000 iteraciones). El objetivo es analizar el estado de los sub-circuitos o islas resultantes y multiplicar el tamaño de los 3 clústeres más grandes.
+* **Parte B:** El objetivo cambia a **unificar completamente la red** (todos los nodos conectados en un único circuito continuo) descartando las conexiones redundantes (cortocircuitos). Al lograr la conexión final (cuando queda un solo clúster), debemos identificar el último cable instalado e interrogar las coordenadas de sus nodos para extraer un producto de verificación.
 
-* **Modularidad:** El software se divide en módulos que pueden ser desarrollados y probados de forma independiente, permitiendo que sean aprovechados para otros proyectos. Las entidades físicas se extrajeron a un paquete común, mientras que los orquestadores lógicos residen en los paquetes independientes `a` y `b`.
+## 2. Lógica Estructural
 
+Para resolver este problema sin colapsar la memoria con colecciones anidadas en cada iteración, se diseñó una arquitectura de alto rendimiento separando el grafo matemático de las reglas temporales del orquestador:
 
-* **Código Expresivo (Good Naming):** Consiste en asignar nombres claros, significativos y relacionados con su propósito a clases y métodos para mejorar la expresividad del código. Se han evitado nombres genéricos, prefiriendo conceptos de dominio exactos como `CircuitAnalyzer` y `NetworkUnifier`.
+* **`CircuitNode` (Record):** Entidad física inmutable. Conoce su ubicación espacial en 3D ($X, Y, Z$) y su identificador unívoco.
+* **`Wire` (Record):** Representa un cable. Relaciona dos cajas y encapsula la distancia espacial (coste) que las separa, implementando `Comparable` para poder ser ordenado.
+* **`NetworkTracker` (Interfaz):** Abstracción del sistema de grafos. Define el contrato estricto para fusionar circuitos (`linkNodes`) y obtener sus tamaños.
+* **`DisjointSetTracker`:** Implementación de altísimo rendimiento de la estructura de datos *Disjoint-Set (Union-Find)* apoyada en *arrays* primitivos. Su responsabilidad es detectar si dos nodos pertenecen a la misma red y fusionarlas sin instanciar objetos basura en memoria.
+* **`WireOptimizer`:** Clase de servicio que encapsula la combinatoria espacial, generando el producto cartesiano de todos los cables posibles y ordenándolos por su distancia euclidiana de menor a mayor.
+* **`CircuitAnalyzer` (A) y `NetworkUnifier` (B):** Orquestadores del negocio. Reciben la topología y el *tracker*, aplican el **Algoritmo de Kruskal** (seleccionando iterativamente los cables más cortos) y detienen la ejecución según las reglas específicas de su parte.
 
+## 3. Principios de Diseño (SOLID)
 
+* **Single Responsibility Principle (SRP):** Cada clase tiene una sola razón para cambiar. `CircuitNode` maneja topología 3D, `Wire` encapsula la conectividad, `WireOptimizer` asume la combinatoria, `DisjointSetTracker` maneja el grafo matemático abstracto, y `NetworkUnifier` orquesta la temporalidad de la construcción de la red.
+* **Open/Closed Principle (OCP):** El orquestador y el grafo están cerrados a la modificación pero abiertos a la extensión. Si mañana se exige un algoritmo diferente al *Union-Find* (por ejemplo, búsquedas BFS/DFS en base de datos), podemos crear una nueva clase que implemente `NetworkTracker` y conectarla sin tocar ni una sola coma del código de los orquestadores.
+* **Liskov Substitution Principle (LSP):** Cualquier estructura de datos topológica que implemente la interfaz `NetworkTracker` puede ser inyectada en los orquestadores garantizando una sustitución segura, ya que respeta firmemente el diseño por contrato de la fusión de nodos.
+* **Interface Segregation Principle (ISP):** La interfaz `NetworkTracker` es completamente minimalista. Expone únicamente los 3 métodos estrictamente necesarios para consultar el grafo (`linkNodes`, `getClusterSizes`, `getRemainingClusters`), evitando forzar a las clases de infraestructura a implementar métodos de lectura de strings o parseo 3D.
+* **Dependency Inversion Principle (DIP):** Los orquestadores de alto nivel (`CircuitAnalyzer` y `NetworkUnifier`) no están acoplados a la implementación del motor matemático `DisjointSetTracker`. Dependen única y exclusivamente de la abstracción `NetworkTracker`.
 
-## Principios de Diseño (SOLID)
+## 4. Fundamentos, Técnicas y Patrones
 
-El diseño de la arquitectura cumple estrictamente con los 5 principios SOLID:
+* **Abstracción y Encapsulamiento (Ocultación de la complejidad):** `NetworkTracker` funciona como un panel de control simple. Gracias a ella, el orquestador ordena conectar nodos sin preocuparse por la compresión de caminos, la optimización por tamaños ni las matemáticas subyacentes de grafos. Todo el estado matemático permanece ciegamente sellado dentro de los arrays privados del *tracker*.
+* **Prevención de Pérdida de Precisión (Double vs Long):** Para ordenar la longitud de los cables de menor a mayor, no es necesario calcular raíces cuadradas. El uso de `Math.sqrt()` obligaría a usar tipos de punto flotante (`double`), los cuales consumen altos ciclos de CPU y sufren de pérdida de precisión por el estándar IEEE-754. Puesto que se comparaban distancias espaciales relativas, se calculó la *Distancia Euclidiana al Cuadrado* pura. Esto mantuvo toda la matemática anclada a enteros primitivos de 64 bits (`long`), maximizando la velocidad y blindando al sistema contra el *Integer Overflow*.
+* **Inyección de Dependencias (DI):** El tracker topológico se instancia en los *tests* de infraestructura y se inyecta por constructor hacia los analizadores lógicos, promoviendo el aislamiento y la fácil capacidad de prueba (*mocking*).
+* **Factory Method (Creacional):** Implementado en `CircuitNode.fromLine()` para controlar y abstraer estandarizadamente el parseo tridimensional de los datos crudos desde los ficheros planos de texto.
 
-* **Single Responsibility Principle (SRP):** Cada clase debe tener una única responsabilidad o razón para cambiar, favoreciendo la cohesión. El modelo `CircuitNode` se encarga exclusivamente del estado espacial, `WireOptimizer` de la combinatoria de cables, y `DisjointSetTracker` de la agrupación matemática de conjuntos disjuntos.
+## 5. Verificación y Tests (BDD)
 
+Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
 
-* **Open/Closed Principle (OCP):** Las clases deben estar abiertas a la extensión pero cerradas a la modificación, permitiendo añadir funcionalidad sin alterar el código existente. Si en el futuro se requiere un algoritmo diferente al *Union-Find* para agrupar nodos, podemos crear una nueva clase que implemente `NetworkTracker` sin necesidad de tocar ni una sola coma de `CircuitAnalyzer` o `NetworkUnifier`.
-
-
-* **Liskov Substitution Principle (LSP):** Los objetos de una subclase deben poder reemplazar a los de su superclase sin alterar el funcionamiento del programa, garantizando consistencia e interoperabilidad. Gracias al diseño por contrato, cualquier estructura de datos topológica que implemente la interfaz `NetworkTracker` puede ser inyectada en los orquestadores garantizando la sustitución segura de componentes.
-
-
-* **Interface Segregation Principle (ISP):** No se debe obligar a una clase a implementar interfaces que no utiliza, reduciendo el acoplamiento y favoreciendo la especialización. La interfaz `NetworkTracker` es completamente minimalista: expone únicamente los 3 métodos estrictamente necesarios para la topología de grafos (`linkNodes`, `getClusterSizes`, `getRemainingClusters`), sin mezclar conceptos de cálculo de distancias o parseo de texto.
-
-
-* **Dependency Inversion Principle (DIP):** Los módulos de alto nivel no deben depender de módulos de bajo nivel, sino de abstracciones. Las clases orquestadoras (`CircuitAnalyzer` y `NetworkUnifier`) no están acopladas a la implementación real de los arreglos (`DisjointSetTracker`), sino que dependen exclusivamente del contrato abstracto de la interfaz.
-
-
-
-## Técnicas y Patrones de Diseño
-
-* **Inyección de Dependencias:** Consiste en separar la creación de objetos de su uso; en lugar de que una clase cree sus dependencias, estas son proporcionadas desde fuera, facilitando la prueba del código. El tracker topológico es instanciado en las clases de Test e inyectado por constructor a los analizadores lógicos.
-
-
-* **Factory Method:** Patrón creacional que encapsula la creación de objetos mediante un método estático, en lugar de usar directamente el constructor. Implementado en `CircuitNode.fromLine()` para controlar y abstraer el parseo de los datos crudos.
-
-
-* **Inmutabilidad del Modelo:** El estado de las clases no debe cambiar una vez creado, lo que evita errores relacionados con efectos secundarios. Se utilizaron `records` en Java (`CircuitNode` y `Wire`) para modelar las entidades de forma puramente inmutable.
-
-
-
-## Paradigmas y Gestión de Memoria
-
-* **Gestión del Heap vs Stack (Optimización Matemática):** Los objetos instanciados se almacenan dinámicamente en el Heap, requiriendo del Garbage Collector para su limpieza, mientras que los primitivos operan de manera muy eficiente en el Stack. Para calcular la distancia espacial, se evitó el uso de `Math.sqrt()` y de objetos envoltorios (`Double`), calculando la distancia al cuadrado puramente con tipos primitivos `long`. Esto garantiza máxima precisión algorítmica y un coste de memoria nulo.
-
-
-* **Programación Funcional (API de Streams):** Los Streams no almacenan datos, sino que describen operaciones inmutables bajo la lógica FILTER -> MAP -> REDUCE.
-
-
-* Se utilizan **operaciones intermedias** como `sorted` y `limit` para restringir el número de elementos procesados.
-
-
-* Se culminan los flujos con **operaciones finales** como `toList` (para volcar el resultado a una colección estática) y `reduce` (para combinar todos los elementos en uno solo, resolviendo la multiplicación de los clústeres más grandes).
+* Se aplica la estructura semántica **Given-When-Then**, nativa del marco **Behavior-Driven Development (BDD)**, orientando los tests a describir casos de uso del dominio:
+* **Test de la Parte A:** Inicializa un conjunto de nodos y valida que, tras interrumpir el algoritmo iterativo de Kruskal prematuramente en 10 conexiones, el tracker es capaz de devolver la lista del tamaño de las subredes restantes y calcular el producto correcto del Top 3 (ej. resultado esperado = 40).
+* **Test de la Parte B:** Somete a estrés al algoritmo de compresión de caminos conectando clústeres hasta consolidar un único circuito maestro final. Verifica que el sistema devuelve adecuadamente las coordenadas del último cable instalado para emitir el producto final de control (ej. resultado esperado = 14136).
