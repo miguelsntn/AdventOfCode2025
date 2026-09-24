@@ -1,62 +1,40 @@
-# Day 9: Movie Theater (Geometría Computacional)
+# Día 9: Sala de Cine
 
-El problema de hoy se introduce en el mundo de la geometría computacional sobre una cuadrícula bidimensional discreta. En la Parte A, el objetivo es maximizar el área de un rectángulo definido por cualquier par de coordenadas. En la Parte B, las reglas cambian drásticamente introduciendo restricciones topológicas: el rectángulo debe estar estrictamente inscrito dentro de un polígono ortogonal (formado por un anillo continuo de baldosas).
+El problema de hoy nos exige evaluar áreas dentro de un plano bidimensional discreto. La entrada consiste en las coordenadas que definen los vértices del recinto de un cine (un polígono).
 
-## Fundamentos de la Ingeniería del Software
+* **En la Parte A:** El objetivo es encontrar el área matemática del rectángulo más grande que se puede formar emparejando cualquier par de vértices del polígono, sin importar si el rectángulo resultante se sale físicamente de las paredes del edificio.
+* **En la Parte B:** El objetivo incorpora restricciones físicas duras. Debemos encontrar el área del rectángulo más grande que resida **completamente dentro de los confines del polígono**. Ningún muro puede atravesarlo y ninguna sección de su área puede recaer en el exterior.
 
-* **Modularidad y DRY (Don't Repeat Yourself):** El código se divide en módulos que pueden ser desarrollados de forma independiente, promoviendo la reutilización de componentes comunes para mejorar la mantenibilidad. Las entidades puras `GridPoint` y `PolygonEdge` se han extraído a un paquete compartido para no duplicar código entre la Parte A y la Parte B.
+## 1. Lógica Estructural
 
+El sistema se ha modelado utilizando primitivas inmutables y clases de servicio orientadas estrictamente al rendimiento algorítmico:
 
-* **Código Expresivo (Good Naming):** Se han asignado nombres claros, significativos y relacionados con su propósito a las clases y métodos, mejorando la expresividad del código. Se evitan nombres genéricos en favor de nombres de dominio matemático como `TheaterAreaCalculator` y `ConstrainedAreaCalculator`.
-
-
-* **Abstracción:** Los detalles complejos del trazado de rayos y la detección de colisiones se han ocultado detrás de métodos privados simples dentro de `ConstrainedAreaCalculator`, ofreciendo una interfaz clara al exterior.
-
-
-
-## Principios de Diseño
-
-El diseño arquitectónico de este día se ha guiado estrictamente por los principios SOLID y las directrices de código limpio:
-
-* **Single Responsibility Principle (SRP):** Cada clase debe tener una única responsabilidad o razón para cambiar, favoreciendo la cohesión y la claridad del diseño. El parseo, la E/S y el filtrado del archivo de texto ocurren exclusivamente en las clases de test. Por su parte, los modelos geométricos solo almacenan estado y las calculadoras solo procesan reglas matemáticas.
+* **`GridPoint` (Record):** Entidad inmutable que modela las coordenadas $X, Y$ bidimensionales. Incluye la inteligencia matemática para calcular el área que forma al proyectarse contra otro punto.
+* **`PolygonEdge` (Record):** Define un segmento de recta inmutable delimitado por dos `GridPoints`. Es esencial para modelar la topología de los muros del recinto y calcular intersecciones.
+* **`TheaterAreaCalculator` (Capa de Servicio A):** Orquesta el pesado algoritmo combinatorio puro, calculando todas las áreas posibles utilizando la API de *Streams* de forma puramente declarativa.
+* **`ConstrainedAreaCalculator` (Capa de Servicio B):** Extensión algorítmica que, además de la combinatoria, verifica la validez topológica del rectángulo generado contra todos los vértices y aristas del plano, utilizando técnicas de *Ray-Casting*.
 
 
-* **Open/Closed Principle (OCP):** Las clases deben estar abiertas a la extensión pero cerradas a la modificación. En lugar de alterar destructivamente la lógica del cálculo de áreas de la Parte A introduciendo sentencias condicionales (`if(isPartB)`), se creó un nuevo componente (`ConstrainedAreaCalculator`) que extiende el sistema con un motor de validación topológico propio, dejando el código original intacto.
+## 2. Algoritmo Geométrico: Point-in-Polygon
 
+Para comprobar si un rectángulo —tras pasar las validaciones de colisión de bordes— reside realmente en el interior del cine o en un espacio vacío exterior (como la cavidad de una herradura), se implementó el clásico algoritmo de "trazado de rayos" (`rayCastInside`).
+Dispara una coordenada virtual con desplazamiento decimal (`+0.5`) hacia el infinito y cuenta mediante un *Stream* funcional los cruces con los bordes verticales del polígono. Si el número de cruces es impar, certifica matemáticamente que el punto está dentro; si es par, está fuera.
 
-* **Liskov Substitution Principle (LSP) y Composition Over Inheritance (COI):** El principio de Liskov dicta que los objetos de una subclase deben poder reemplazar a los de su superclase sin alterar el funcionamiento del programa. Para evitar violar este principio (ya que el cálculo con restricciones altera drásticamente las precondiciones del cálculo normal), se aplicó el principio **COI**: se prefirió la composición de objetos y la separación de clases frente a la herencia.
+## 4. Principios de Diseño (SOLID)
 
+* **Single Responsibility Principle (SRP):** Las clases de dominio (`GridPoint`, `PolygonEdge`) son estructuras puras de datos matemáticos pasivos. Toda la orquestación algorítmica y los complejos cálculos de trazado de rayos recaen exclusivamente en los calculadores de servicio.
+* **Open/Closed Principle (OCP):** En lugar de contaminar el analizador de la Parte A con sentencias booleanas (`if (esParteB)`) o condicionales que evalúen colisiones, el código se mantuvo cerrado a la modificación. Las nuevas restricciones topológicas se resolvieron extendiendo el sistema e inyectándolas en un nuevo servicio calculador totalmente independiente.
+* **Interface Segregation Principle (ISP) y Encapsulamiento:** El `ConstrainedAreaCalculator` no expone sus complejos submétodos geométricos (`rayCastInside`, `isIntersectedByEdges`). Todos están estrictamente ocultos como `private`, garantizando que los clientes externos solo deban consumir la firma limpia `findLargestValidArea()`.
 
-* **Interface Segregation Principle (ISP) y Principio de Mínimo Compromiso:** Una interfaz debe exponer solo lo necesario para operar, ocultando detalles internos y reduciendo la dependencia entre módulos. Nuestras calculadoras solo exponen un único método público (`findMaxArea` y `findLargestValidArea`). Los detalles complejos de las aristas y el trazado de rayos están segregados y ocultos como métodos privados.
+## 5. Fundamentos y Clean Code
 
+* **Abstracción:** Se encapsula la altísima complejidad geométrica bidimensional. El cliente simplemente inyecta una lista de puntos al calculador y obtiene un área escalar, ignorando la existencia del algoritmo *Ray-Casting*.
+* **Inmutabilidad y Prevención de Desbordamiento:** Uso estricto del tipo primitivo de 64 bits (`long`) en lugar de `int` para evitar el temido *Integer Overflow* al multiplicar áreas extensas de coordenadas geográficas. Además, el calculador sella su estado interno inmediatamente inyectando los puntos mediante `List.copyOf()`, blindando al motor de cualquier efecto colateral originado desde el exterior.
 
-* **Dependency Inversion Principle (DIP):** Los módulos de alto nivel no deben depender de módulos de bajo nivel, sino de abstracciones. Aplicando la **Inyección de Dependencias**, que consiste en separar la creación de objetos de su uso, las calculadoras no instancian los lectores de archivos ni dependen del sistema de E/S. Reciben sus colecciones inmutables (`List<GridPoint>`) inyectadas directamente por el constructor.
+## 6. Verificación y Tests (BDD)
 
+Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
 
-* **Keep It Simple, Stupid (KISS) y Principio de Mínima Sorpresa:** El comportamiento de un componente debe ser predecible e intuitivo, y el código debe ser claro y directo, evitando la complejidad innecesaria. En la Parte B, en lugar de crear un enjambre de validadores externos inyectados que dificultarían el seguimiento del código, se optó por agrupar la lógica de validación del rectángulo en métodos privados altamente cohesivos dentro de la propia calculadora.
-
-
-
-## Técnicas y Patrones de Diseño
-
-* **Inmutabilidad del Modelo:** El estado de las clases no debe cambiar una vez creado, lo que evita errores relacionados con efectos secundarios. Se han modelado `GridPoint` y `PolygonEdge` como `records` en Java, sellando completamente sus datos geométricos.
-
-
-* **Factory Method:** Patrón creacional que encapsula la creación de objetos mediante un método estático, en lugar de usar directamente el constructor. Implementado en `GridPoint.fromString()` para centralizar y abstraer el parseo de los vértices.
-
-
-* **Point-In-Polygon (Trazado de Rayos):** Para determinar si un espacio despejado está dentro o fuera del polígono, lanzamos un "rayo" desde el punto evaluado hacia el infinito y contamos cuántas aristas verticales cruza. Si el número de cruces es impar, estamos dentro; si es par, estamos fuera.
-* **Poda del Espacio de Búsqueda (Search Space Pruning):** Evaluar colisiones para cientos de miles de combinaciones destruiría el rendimiento. Se introdujo una condición simple: `if (area <= maxArea) continue;`. Si el área calculada no supera el récord existente, el programa ignora todas las complejas validaciones geométricas topológicas y salta a la siguiente iteración.
-
-## Paradigmas y Gestión de Memoria
-
-* **Gestión del Heap vs Stack:** En el entorno de la JVM, las variables locales y tipos primitivos operan muy eficientemente en el Stack, mientras que los objetos dinámicos e instancias temporales saturan el Heap, obligando al Garbage Collector a pausar la ejecución. Para la combinatoria masiva de pares de coordenadas, se utilizaron intencionalmente bucles imperativos `for` en lugar de flujos funcionales anidados (`flatMap`), manteniendo las referencias iterativas en el Stack y logrando un rendimiento óptimo de CPU y memoria.
-
-
-* **Programación Funcional (API de Streams):** Los Streams no almacenan datos, sino que describen operaciones inmutables bajo la lógica FILTER -> MAP -> REDUCE. Aunque se evitaron en la combinatoria pesada por eficiencia, se aplicaron magistralmente donde aportan valor semántico declarativo:
-
-
-* En la validación geométrica, se usaron operaciones finales como `anyMatch` y `count` para la comprobación de vértices y conteo de intersecciones.
-
-
-* En la lectura del fichero dentro de las pruebas, se aplicó un filtro (`filter`), un mapeo referencial (`GridPoint::fromString`) y la operación de volcado `toList` para inyectar una colección limpia e inmutable a las calculadoras.
+* Se aplica la estructura semántica de comportamiento **Given-When-Then** (Behavior-Driven Development), lo que permite leer los tests como la documentación oficial del sistema.
+* **Test de la Parte A:** Verifica que el producto cartesiano evalúa correctamente todas las combinaciones y emite el área teórica más grande ignorando la topología interior de los muros (ej. resultado esperado = 12).
+* **Test de la Parte B:** Somete a estrés los algoritmos geométricos de *Ray-Casting* y colisiones. Valida que el sistema logre detectar y descartar correctamente rectángulos que cruzan las paredes, contienen columnas internas o residen en cavidades "falsas" del exterior del polígono (ej. resultado esperado = 6).
