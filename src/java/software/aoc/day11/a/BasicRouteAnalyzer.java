@@ -7,16 +7,18 @@ import java.util.Map;
 
 public class BasicRouteAnalyzer {
     private final ReactorNetwork network;
+    private final Map<String, Long> memo;
 
     public BasicRouteAnalyzer(ReactorNetwork network) {
         this.network = network;
+        this.memo = new HashMap<>();
     }
 
     public long countPaths(String start, String target) {
-        return explorePaths(start, target, new HashMap<>());
+        return explorePaths(start, target);
     }
 
-    private long explorePaths(String current, String target, Map<String, Long> memo) {
+    private long explorePaths(String current, String target) {
         if (current.equals(target)) {
             return 1L;
         }
@@ -25,10 +27,9 @@ public class BasicRouteAnalyzer {
             return memo.get(current);
         }
 
-        long totalPaths = 0;
-        for (String neighbor : network.getNeighborsOf(current)) {
-            totalPaths += explorePaths(neighbor, target, memo);
-        }
+        long totalPaths = network.getNeighborsOf(current).stream()
+                .mapToLong(neighbor -> explorePaths(neighbor, target))
+                .sum();
 
         memo.put(current, totalPaths);
         return totalPaths;

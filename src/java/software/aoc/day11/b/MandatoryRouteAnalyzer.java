@@ -7,36 +7,43 @@ import java.util.Map;
 
 public class MandatoryRouteAnalyzer {
     private final ReactorNetwork network;
+    private final Map<DfsState, Long> memo;
 
     public MandatoryRouteAnalyzer(ReactorNetwork network) {
         this.network = network;
+        this.memo = new HashMap<>();
     }
 
     public long countRestrictedPaths(String start, String target, String req1, String req2) {
-        return exploreRestrictedPaths(start, 0, target, req1, req2, new HashMap<>());
+        DfsState initialState = new DfsState(
+                start,
+                start.equals(req1),
+                start.equals(req2)
+        );
+        return exploreRestrictedPaths(initialState, target, req1, req2);
     }
 
-    private long exploreRestrictedPaths(String current, int stateMask, String target, String req1, String req2, Map<DfsState, Long> memo) {
-        if (current.equals(req1)) stateMask |= 1;
-        if (current.equals(req2)) stateMask |= 2;
-
-        if (current.equals(target)) {
-            return (stateMask == 3) ? 1L : 0L;
+    private long exploreRestrictedPaths(DfsState state, String target, String req1, String req2) {
+        if (state.currentNode().equals(target)) {
+            return (state.hasVisitedReq1() && state.hasVisitedReq2()) ? 1L : 0L;
         }
 
-        DfsState currentState = new DfsState(current, stateMask);
-        if (memo.containsKey(currentState)) {
-            return memo.get(currentState);
+        if (memo.containsKey(state)) {
+            return memo.get(state);
         }
 
-        long totalPaths = 0;
-        for (String neighbor : network.getNeighborsOf(current)) {
-            totalPaths += exploreRestrictedPaths(neighbor, stateMask, target, req1, req2, memo);
-        }
+        long totalPaths = network.getNeighborsOf(state.currentNode()).stream()
+                .map(neighbor -> new DfsState(
+                        neighbor,
+                        state.hasVisitedReq1() || neighbor.equals(req1),
+                        state.hasVisitedReq2() || neighbor.equals(req2)
+                ))
+                .mapToLong(nextState -> exploreRestrictedPaths(nextState, target, req1, req2))
+                .sum();
 
-        memo.put(currentState, totalPaths);
+        memo.put(state, totalPaths);
         return totalPaths;
     }
 
-    private record DfsState(String node, int mask) {}
+    private record DfsState(String currentNode, boolean hasVisitedReq1, boolean hasVisitedReq2) {}
 }

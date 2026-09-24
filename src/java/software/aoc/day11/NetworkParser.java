@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class NetworkParser {
 
@@ -21,11 +22,17 @@ public class NetworkParser {
             String node = parts[0].trim();
 
             if (parts.length > 1 && !parts[1].isBlank()) {
-                List<String> neighbors = Arrays.asList(parts[1].trim().split("\\s+"));
+                List<String> neighbors = Arrays.stream(parts[1].trim().split("\\s+"))
+                        .filter(Predicate.not(String::isBlank))
+                        .toList();
                 graph.put(node, neighbors);
             } else {
                 graph.put(node, List.of());
             }
+        }
+
+        if (!graph.containsKey("out")) {
+            graph.put("out", List.of());
         }
 
         return new ReactorNetwork(graph);
