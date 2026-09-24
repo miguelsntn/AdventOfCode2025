@@ -72,7 +72,10 @@ Las soluciones se validan de forma automática mediante **pruebas unitarias** es
 * Los tests se estructuran semánticamente bajo la metodología **BDD (Behavior-Driven Development)** usando el patrón **Given-When-Then** (Dado un contexto, Cuando ocurre una acción, Entonces se espera un resultado).
 
 
-* **Parte A (`aTest`):** Verifica que se extraigan y maximicen matemáticamente 2 baterías (ejemplo: resultado `197`), probando la solidez del *Suffix Max Array*.
+* **Parte A (`aTest`):** Verifica que se extraigan y maximicen matemáticamente 2 baterías, probando la solidez del *Suffix Max Array*.
 
 
 * **Parte B (`bTest`):** Evalúa un escenario que demanda enteros masivos y la selección precisa de 12 dígitos, validando el comportamiento lineal del *Monotonic Stack* frente a cadenas problemáticas o fricción alta.
+
+
+* El resultado esperado para la Parte A es 17301 y para la Parte B es 172162399742349.

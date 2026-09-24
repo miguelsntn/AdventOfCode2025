@@ -46,3 +46,4 @@ Las soluciones se validan de forma automatizada mediante **pruebas unitarias** u
 * Se siguió la estructura semántica nativa del marco **Behavior-Driven Development (BDD)**, orientada al patrón formal **Given-When-Then** (Dado un estado de la red, Cuando el analizador busca la ruta, Entonces emite la suma de caminos válidos).
 * **Test de la Parte A:** Inyecta un grafo base de prueba funcional y valida la correcta lectura de nodos finales y sumideros, garantizando que el contador recursivo identifique un total de rutas viables a nivel de sistema base.
 * **Test de la Parte B:** Somete a estrés los filtros de hitos obligatorios del `DfsState`. Valida la correcta resolución de los flujos de memoria en grafo, confirmando que las rutas memorizadas certifican matemáticamente haber atravesado los nodos limitantes antes de ser retornadas como válidas.
+* El resultado esperado para la Parte A es 428 y para la Parte B es 331468292364745.

@@ -40,5 +40,6 @@ Para resolver este problema sin colapsar la memoria con colecciones anidadas en 
 Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
 
 * Se aplica la estructura semántica **Given-When-Then**, nativa del marco **Behavior-Driven Development (BDD)**, orientando los tests a describir casos de uso del dominio:
-* **Test de la Parte A:** Inicializa un conjunto de nodos y valida que, tras interrumpir el algoritmo iterativo de Kruskal prematuramente en 10 conexiones, el tracker es capaz de devolver la lista del tamaño de las subredes restantes y calcular el producto correcto del Top 3 (ej. resultado esperado = 40).
-* **Test de la Parte B:** Somete a estrés al algoritmo de compresión de caminos conectando clústeres hasta consolidar un único circuito maestro final. Verifica que el sistema devuelve adecuadamente las coordenadas del último cable instalado para emitir el producto final de control (ej. resultado esperado = 14136).
+* **Test de la Parte A:** Inicializa un conjunto de nodos y valida que, tras interrumpir el algoritmo iterativo de Kruskal prematuramente en 10 conexiones, el tracker es capaz de devolver la lista del tamaño de las subredes restantes y calcular el producto correcto del Top 3.
+* **Test de la Parte B:** Somete a estrés al algoritmo de compresión de caminos conectando clústeres hasta consolidar un único circuito maestro final. Verifica que el sistema devuelve adecuadamente las coordenadas del último cable instalado para emitir el producto final de control.
+* El resultado esperado para la Parte A es 244188 y para la Parte B es 8361881885.

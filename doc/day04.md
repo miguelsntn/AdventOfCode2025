@@ -36,3 +36,5 @@ Las soluciones se validan de forma automatizada mediante pruebas unitarias escri
 * Se sigue el patrón semántico **Given-When-Then** heredado del **Behavior-Driven Development (BDD)**, lo que transforma las pruebas en documentación viva del sistema.
 * **Test de la Parte A:** Asegura que el conteo estático con vecindad de Moore calcule correctamente las adyacencias sin arrojar excepciones de desbordamiento en los bordes de la matriz (`IndexOutOfBoundsException`).
 * **Test de la Parte B:** Valida que el motor de *Double Buffering* respete el estado temporal de la generación actual. Asegura que retirar un rollo en el cuadrante superior izquierdo no afecte indebidamente el cálculo de accesibilidad de su vecino adyacente dentro de la misma oleada de eliminación.
+
+* El resultado esperado para la Parte A es 1367 y para la Parte B es 9144.

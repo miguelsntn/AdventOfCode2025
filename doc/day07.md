@@ -63,5 +63,6 @@ El sistema huye de enfoques frágiles basados en recursividad profunda (que prov
 Las soluciones se validan de forma automatizada mediante pruebas unitarias escritas con **JUnit 5** y **AssertJ**.
 
 * Se sigue el patrón semántico **Given-When-Then** heredado del enfoque **Behavior-Driven Development (BDD)**, orientando las pruebas al comportamiento del sistema y maximizando su valor como documentación.
-* **Parte A:** Se inyecta la física clásica y se verifica la capacidad del sistema para detectar el punto de partida, rastrear trayectorias continuas y calcular con precisión el número de divisiones del haz (ej. resultado esperado = 16).
-* **Parte B:** Se inyecta la física cuántica para someter a estrés al motor de Programación Dinámica, validando que el agrupamiento funcional previene la explosión combinatoria y suma correctamente las realidades paralelas (ej. resultado esperado = 1.048.576).
+* **Parte A:** Se inyecta la física clásica y se verifica la capacidad del sistema para detectar el punto de partida, rastrear trayectorias continuas y calcular con precisión el número de divisiones del haz.
+* **Parte B:** Se inyecta la física cuántica para someter a estrés al motor de Programación Dinámica, validando que el agrupamiento funcional previene la explosión combinatoria y suma correctamente las realidades paralelas.
+* El resultado esperado para la Parte A es 1570 y para la Parte B es 15118009521693.

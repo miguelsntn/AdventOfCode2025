@@ -102,3 +102,6 @@ El sistema huye de la obsesión por los tipos primitivos modelando objetos del d
 
 
 * Esta estructura orienta las pruebas a comprobar el comportamiento del sistema, maximizando su legibilidad y sirviendo como validación robusta para las paradas estáticas de la Parte A y las intersecciones de la Parte B.
+
+
+* El resultado esperado para la Parte A es 1145 y para la Parte B es 6561.

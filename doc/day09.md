@@ -36,5 +36,6 @@ Dispara una coordenada virtual con desplazamiento decimal (`+0.5`) hacia el infi
 Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
 
 * Se aplica la estructura semántica de comportamiento **Given-When-Then** (Behavior-Driven Development), lo que permite leer los tests como la documentación oficial del sistema.
-* **Test de la Parte A:** Verifica que el producto cartesiano evalúa correctamente todas las combinaciones y emite el área teórica más grande ignorando la topología interior de los muros (ej. resultado esperado = 12).
-* **Test de la Parte B:** Somete a estrés los algoritmos geométricos de *Ray-Casting* y colisiones. Valida que el sistema logre detectar y descartar correctamente rectángulos que cruzan las paredes, contienen columnas internas o residen en cavidades "falsas" del exterior del polígono (ej. resultado esperado = 6).
+* **Test de la Parte A:** Verifica que el producto cartesiano evalúa correctamente todas las combinaciones y emite el área teórica más grande ignorando la topología interior de los muros.
+* **Test de la Parte B:** Somete a estrés los algoritmos geométricos de *Ray-Casting* y colisiones. Valida que el sistema logre detectar y descartar correctamente rectángulos que cruzan las paredes, contienen columnas internas o residen en cavidades "falsas" del exterior del polígono.
+* El resultado esperado para la Parte A es 4739623064 y para la Parte B es 1654141440.

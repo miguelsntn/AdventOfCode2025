@@ -51,3 +51,5 @@ Las soluciones se validan de forma automática mediante **pruebas unitarias** es
 
 * Las pruebas están estructuradas semánticamente bajo el patrón **Given-When-Then** (Dado un contexto, Cuando ocurre una acción, Entonces se espera un resultado), heredado del enfoque **BDD (Behavior-Driven Development)**.
 * Se utilizan las especificaciones oficiales de los ejemplos del rompecabezas para comprobar el comportamiento del sistema, garantizando que el diseño de las *Regex* y las lógicas numéricas son completamente estancas antes de inyectarles los archivos de texto reales en el entorno de producción.
+
+* El resultado esperado para la Parte A es 44487518055 y para la Parte B es 53481866137.

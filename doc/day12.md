@@ -45,4 +45,5 @@ Para compensar el coste de clonar objetos en el *Heap*, se implementaron tres he
 Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
 
 * Se aplicó la estructura semántica **Given-When-Then** para validar el comportamiento del sistema.
-* El sistema de pruebas no actúa como un mero validador pasivo; en la fase **When**, asume un rol funcional orquestando la lectura del `FarmParser` y la inicialización independiente de un `FarmAllocator` para cada petición del usuario (mediante `Stream.generate().limit()`). Esto garantiza una estricta **Independencia Transaccional**, asegurando que los historiales de memoización de una granja fallida no contaminen los cálculos bidimensionales de la siguiente.
+* El sistema de pruebas no actúa como un mero validador pasivo; en la fase**When**, asume un rol funcional orquestando la lectura del `FarmParser` y la inicialización independiente de un `FarmAllocator` para cada petición del usuario (mediante `Stream.generate().limit()`). Esto garantiza una estricta **Independencia Transaccional**, asegurando que los historiales de memoización de una granja fallida no contaminen los cálculos bidimensionales de la siguiente.
+* El resultado esperado es 403.

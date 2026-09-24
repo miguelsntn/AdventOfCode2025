@@ -48,3 +48,4 @@ Las soluciones se validan de forma automatizada mediante pruebas unitarias escri
 * Están estructuradas semánticamente siguiendo el patrón **Given-When-Then** (Dado un contexto, Cuando ocurre una acción, Entonces se espera un resultado), propio del enfoque **BDD (Behavior-Driven Development)**, lo que las convierte en documentación ejecutable y viva del proyecto.
 * **Test Parte A:** Verifica la correcta delimitación de bloques por columnas vacías, el parseo horizontal numérico y la sumatoria del *Grand Total*.
 * **Test Parte B:** Valida la resiliencia del sistema ante el cambio de topología. Comprueba que el escáner vertical sea capaz de aislar los dígitos de forma descendente y aplicar el operador de la fila base de manera matemáticamente estanca.
+* El resultado esperado para la Parte A es 6171290547579 y para la Parte B es 8811937976367.

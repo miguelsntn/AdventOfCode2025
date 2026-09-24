@@ -36,5 +36,6 @@ Para resolver este problema sin incurrir en fugas de memoria o cuellos de botell
 Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
 Se aplicó la estructura semántica **Given-When-Then** propia del **Behavior-Driven Development (BDD)**, utilizando como contexto los ejemplos base del problema original para probar los flujos sin acoplar los tests al sistema de archivos local:
 
-* **Test Parte A:** Se verifica el comportamiento del motor de cruce estático, evaluando si el recuento de los ingredientes individuales coincide matemáticamente con los intervalos de frescura activos (ej. 4 ingredientes válidos).
-* **Test Parte B:** Se somete el algoritmo de fusión (*Merge Intervals*) a estrés, asegurándose de que logre detectar solapamientos totales, solapamientos parciales e intervalos limítrofes, consolidando correctamente la capacidad del inventario (ej. calculando 14 unidades sin duplicidades).
+* **Test Parte A:** Se verifica el comportamiento del motor de cruce estático, evaluando si el recuento de los ingredientes individuales coincide matemáticamente con los intervalos de frescura activos.
+* **Test Parte B:** Se somete el algoritmo de fusión (*Merge Intervals*) a estrés, asegurándose de que logre detectar solapamientos totales, solapamientos parciales e intervalos limítrofes, consolidando correctamente la capacidad del inventario.
+* El resultado esperado para la Parte A es 640 y para la Parte B es 365804144481581.

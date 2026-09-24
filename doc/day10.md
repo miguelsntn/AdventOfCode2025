@@ -1,4 +1,4 @@
-# Día 10: Factory (Optimizaciones Binarias y Programación Dinámica)
+# Día 10: Factory
 
 El desafío de hoy exige restaurar las máquinas de una fábrica, configurándolas mediante complejos arreglos de botones interconectados.
 
@@ -43,5 +43,6 @@ El diseño de la arquitectura cumple estrictamente con los 5 principios SOLID:
 Las soluciones se validan de forma automatizada mediante **pruebas unitarias** escritas con **JUnit 5** y **AssertJ**.
 
 * Se sigue el patrón semántico **Given-When-Then**, nativo de la metodología **Behavior-Driven Development (BDD)**, estructurando los casos de prueba para garantizar la auto-documentación.
-* **Test Parte A:** Inyecta un entorno virtual booleano. Verifica la correcta resolución del sistema de interruptores en el campo Módulo-2 (Galois), cerciorando el encuentro del patrón lumínico objetivo (ej. resultado esperado = 4).
-* **Test Parte B:** Somete a estrés al árbol de recursividad cuántico inyectando la necesidad de optimizar voltajes. Valida el correcto funcionamiento de la caché de Programación Dinámica al encontrar el voltaje óptimo a pesar del incremento del coste en las ramas ramificadas (ej. resultado esperado = 12).
+* **Test Parte A:** Inyecta un entorno virtual booleano. Verifica la correcta resolución del sistema de interruptores en el campo Módulo-2 (Galois), cerciorando el encuentro del patrón lumínico objetivo.
+* **Test Parte B:** Somete a estrés al árbol de recursividad cuántico inyectando la necesidad de optimizar voltajes. Valida el correcto funcionamiento de la caché de Programación Dinámica al encontrar el voltaje óptimo a pesar del incremento del coste en las ramas ramificadas.
+* El resultado esperado para la Parte A es 457 y para la Parte B es 17576.
