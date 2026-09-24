@@ -1,30 +1,48 @@
-# Day 11: Reactor
+# Día 11: Reactor
 
-El problema de hoy introduce la Teoría de Grafos, específicamente modelando una red de conductos de datos con un flujo unidireccional. Matemáticamente, esto representa un **Grafo Acíclico Dirigido (DAG - Directed Acyclic Graph)**. En la Parte A, el objetivo es encontrar el número total de caminos posibles entre dos nodos. En la Parte B, la complejidad aumenta al introducir restricciones topológicas obligatorias: los caminos válidos deben atravesar forzosamente dos nodos de control específicos (`dac` y `fft`) en cualquier orden, lo que nos obliga a realizar una **Búsqueda en el Espacio de Estados**.
+El problema introduce la Teoría de Grafos, modelando una red de conductos de datos de la fábrica con un flujo unidireccional. Matemáticamente, esto representa un **Grafo Acíclico Dirigido (DAG - Directed Acyclic Graph)**.
 
-## Fundamentos de la Ingeniería del Software
+* **En la Parte A:** El objetivo es encontrar el número total de caminos únicos posibles desde un nodo de inicio hasta un nodo de salida.
+* **En la Parte B:** La complejidad matemática aumenta al introducir restricciones topológicas obligatorias. Los caminos válidos deben atravesar forzosamente dos nodos de control específicos (`dac` y `fft`) en cualquier orden antes de salir de la red. Esto convierte el problema en una compleja **Búsqueda en el Espacio de Estados**.
 
-* **Intercambio Espacio-Tiempo (Space-Time Tradeoff):** En un grafo altamente interconectado, calcular cada ruta de forma independiente genera un tiempo de ejecución exponencial. Para reducir esto a tiempo polinómico, sacrificamos un poco de memoria RAM utilizando un diccionario (`HashMap`) que actúa como caché (Memoización), reduciendo drásticamente la complejidad computacional.
-* **Encapsulamiento e Inmutabilidad:** El modelo de dominio `ReactorNetwork` envuelve el mapa de adyacencias en un `Record` inmutable. Al inicializarse, crea una copia profunda e inmodificable del grafo (`Collectors.toUnmodifiableMap`), impidiendo que los algoritmos de búsqueda destruyan o alteren accidentalmente la topología original de la fábrica.
+## 1. Lógica Estructural
 
-## Principios de Diseño (SOLID)
+Para evitar la sobreingeniería funcional que satura la memoria instanciando miles de copias de listas de sucesores o conjuntos temporales por cada nodo, se implementó una arquitectura limpia y altamente acoplada al rendimiento:
 
-El diseño de la arquitectura para la resolución de este grafo se rige estrictamente por los 5 principios SOLID:
+* **`ReactorNetwork` (Record):** El modelo inmutable de dominio. Retiene y sella el grafo de conexiones de la red (`Map<String, List<String>>`).
+* **`NetworkParser`:** Una clase puramente utilitaria (Factory) que se encarga del parseo y análisis léxico del archivo de texto en bruto, garantizando que el grafo se inicialice sin nodos "fantasma".
+* **`BasicRouteAnalyzer` (A):** Analizador algorítmico que implementa un modelo de búsqueda en profundidad (DFS) estándar para contar todos los caminos posibles hacia la salida.
+* **`MandatoryRouteAnalyzer` (B):** Extensión algorítmica especializada. Resuelve el requerimiento de la Parte B mediante un DFS impulsado por un **State Object Pattern**, rastreando simultáneamente la navegación espacial y la consecución de hitos lógicos.
 
-* **Single Responsibility Principle (SRP):** Cada clase tiene una misión matemática y lógica exacta. Todo el análisis léxico y parseo del texto se delega a `NetworkParser`. El modelo `ReactorNetwork` solo almacena y protege los datos topológicos, mientras que `BasicRouteAnalyzer` y `MandatoryRouteAnalyzer` se limitan exclusivamente a ejecutar algoritmos de búsqueda.
-* **Open/Closed Principle (OCP):** La arquitectura demostró su total flexibilidad en la Parte B. En lugar de contaminar el analizador original introduciendo declaraciones condicionales invasivas (`if(isPartB)`), el sistema se extendió creando un nuevo componente independiente (`MandatoryRouteAnalyzer`) que reutiliza la abstracción del grafo original dejándola intacta.
-* **Liskov Substitution Principle (LSP):** El principio de Liskov dicta que las subclases no deben alterar la correctitud del programa. Al introducir restricciones topológicas obligatorias en la Parte B, las precondiciones del cálculo de rutas cambian drásticamente. Para evitar violar LSP con una herencia forzada, se aplicó el principio de Composición sobre Herencia (COI), creando analizadores independientes que se componen de manera segura con el mismo modelo de dominio inmutable. Además, el uso de abstracciones estándar (`Map`, `List`) garantiza que cualquier implementación subyacente funcione sin alterar el comportamiento.
-* **Interface Segregation Principle (ISP):** Una interfaz debe exponer solo lo estrictamente necesario. La clase `ReactorNetwork` expone una API pública minimalista y altamente segregada: ofrece únicamente el método `getNeighborsOf(node)`. Oculta por completo los métodos mutadores del mapa interno (`put`, `remove`, `clear`), garantizando que los clientes consuman solo lo que necesitan y protegiendo la integridad del grafo.
-* **Dependency Inversion Principle (DIP):** Los analizadores algorítmicos (módulos de alto nivel) no dependen de estructuras de datos crudas (bajo nivel) instanciándolas ellos mismos. Reciben el grafo mediante **Inyección de Dependencias** a través de la abstracción `ReactorNetwork`, aislando la lógica matemática de la forma en que los datos fueron extraídos o almacenados en memoria.
+## 2. Paradigmas de Programación
 
-## Técnicas y Patrones de Diseño
+El éxito de esta solución radica en la correcta aplicación de tres paradigmas de programación que trabajan en armonía:
 
-* **Búsqueda en Profundidad (DFS):** Utilizamos un enfoque recursivo en el que profundizamos hasta llegar al nodo destino o a un callejón sin salida, acumulando los caminos válidos de regreso hacia la raíz.
-* **Programación Dinámica (Memoización):** La piedra angular matemática de la solución. Cuando preguntamos "¿Cuántos caminos hay desde `ccc` hasta el final?", el programa lo calcula una sola vez y lo memoriza. Si otra ruta vuelve a converger en `ccc`, el programa devuelve instantáneamente el valor guardado, podando millones de ramas computacionales iterativas.
-* **Máscaras de Bits (Bitmasking) para Estados:** En la Parte B, el estado del algoritmo no es solo el "nodo actual", sino "nodo actual + hitos visitados". Codificamos los hitos en un número entero mediante aritmética de bits: `stateMask |= 1` y `stateMask |= 2`. Solo si la máscara final equivale a `3`, la ruta es topológicamente válida.
-* **Prevención de *Memory Churn* (Gestión del Heap):** Al aplicar memoización con estados compuestos, un enfoque ingenuo concatenaría variables (`current + "_" + state`) para usarlas como clave del `HashMap`. Esto satura rápidamente el **Heap** de la JVM con miles de *Strings* efímeros. Para evitar esto, se diseñó un `record DfsState(String node, int mask)` interno y privado. Los *records* implementan eficientemente `equals()` y `hashCode()` a nivel de *bytecode*, actuando como la clave perfecta para la caché y garantizando **Alta Cohesión** y eficiencia espacial sin generar pausas del *Garbage Collector*.
+* **Programación Dinámica (Top-Down con Memoización):** El corazón matemático de la solución. En un grafo altamente interconectado, explorar cada ruta individual genera una complejidad exponencial $O(2^N)$. Al dividir el conteo de rutas en subproblemas superpuestos y almacenar sus resultados en caché, podamos millones de ramas computacionales de forma instantánea.
+* **Programación Funcional (Pureza e Inmutabilidad):** Todo el recorrido de grafos se ejecuta sin alterar variables de estado globales en bucles `for` sucios. El uso del registro `DfsState` asegura que cada rama de la recursión sea matemáticamente pura y libre de efectos colaterales (*side-effects*), garantizando que unas rutas no corrompan a las otras durante la exploración paralela conceptual.
+* **Programación Declarativa:** En la instanciación de mapas inmutables y en la iteración de vecinos (`network.getNeighborsOf().stream()...`), se utiliza la API de *Streams* para declarar **qué** datos se quieren filtrar o mapear, delegando el **cómo** al motor de iteración interna de Java.
 
-## Paradigmas y Verificación
+## 3. Principios de Diseño (SOLID)
 
-* **Programación Recursiva:** La naturaleza del DAG hace que el problema sea inherentemente recursivo: el número de rutas desde el nodo *A* hasta el sumidero es matemáticamente la suma de las rutas desde todos los vecinos de *A* hacia el sumidero.
-* **TDD y Streams Funcionales:** El sistema ha sido probado unitariamente con JUnit 5 siguiendo el patrón **Given-When-Then** (BDD). Se inyectaron funcionalmente los esquemas topológicos de prueba mediante el uso de la API de Streams (`lines()`, `filter()`, `toList()`), validando la exactitud del algoritmo de grafos mediante los ejemplos del problema antes de ejecutarlo sobre el entorno de producción real.
+El diseño de la arquitectura se rige estrictamente por los 5 principios SOLID:
+
+* **Single Responsibility Principle (SRP):** Separación total de responsabilidades. El parseo de texto crudo (`NetworkParser`), el almacenamiento de la topología inmutable (`ReactorNetwork`) y las leyes algorítmicas (`RouteAnalyzers`) son entidades estrictamente aisladas.
+* **Open/Closed Principle (OCP):** El sistema demostró su flexibilidad real en la Parte B. En lugar de ensuciar y corromper el analizador original (`BasicRouteAnalyzer`) inyectándole sentencias lógicas condicionales (`if (esParteB)`), el código se extendió creando un nuevo analizador independiente (`MandatoryRouteAnalyzer`) que operó sin problemas sobre el mismo modelo `ReactorNetwork` intacto.
+* **Liskov Substitution Principle (LSP) y Composition Over Inheritance (COI):** Las lógicas espaciales de ambas partes cambian drásticamente. Obligar a un analizador a heredar del otro habría roto el diseño por contrato al forzar el manejo de nuevos estados. Por ello, se utilizó la composición (COI): analizadores autónomos que componen en su interior a `ReactorNetwork`.
+* **Interface Segregation Principle (ISP):** La API expuesta por `ReactorNetwork` es minimalista, exponiendo únicamente el método de consulta `getNeighborsOf(node)`. Mantiene ocultos todos los demás atributos mutadores de su mapa interno, garantizando seguridad absoluta frente a modificaciones de agentes externos.
+* **Dependency Inversion Principle (DIP):** Los analizadores (alto nivel) no construyen ni dependen de ficheros de texto (bajo nivel). Se inyecta exclusivamente la abstracción del mapa en su constructor, permitiendo probar la matemática de grafos inyectando redes simuladas desde los tests.
+
+## 4. Patrones de Diseño, Fundamentos y Técnicas
+
+* **Patrón de Diseño: State Object (Objeto de Estado):** En la Parte B, en lugar de pasar booleanos crudos (`visitedDac`, `visitedFft`) a través de la pila recursiva, se encapsula el contexto de la búsqueda en el *record* inmutable `DfsState`. Esto elimina el anti-patrón "Obsesión por los Tipos Primitivos" (Primitive Obsession) y proporciona una clave compuesta perfecta y semántica para la caché de memoización.
+* **Patrón Creacional: Factory Method:** La clase `NetworkParser` actúa como una factoría pura. Oculta la lógica sucia de manipular cadenas de texto, el uso de `split()` y la sanitización, emitiendo únicamente objetos `ReactorNetwork` blindados.
+* **Resolución de Condición de Carrera Lógica (El Nodo *Out*):** Algunos nodos no definen explícitamente sus conexiones salientes. Buscar en el mapa de adyacencia un nodo inexistente causaría un mortal `NullPointerException`. `ReactorNetwork` aplica programación defensiva utilizando `getOrDefault()`, retornando una lista vacía que detiene fluidamente la recursión.
+* **Previsión de Desbordamiento Numérico (Integer Overflow):** La cantidad de posibles combinaciones de rutas en una red densa crece a velocidades titánicas. Para prevenir cálculos erróneos debidos a un desbordamiento de enteros de 32 bits, el sistema opera de forma unificada utilizando acumuladores del tipo primitivo escalado `long`.
+
+## 5. Verificación y Tests (BDD)
+
+Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
+
+* Se siguió la estructura semántica nativa del marco **Behavior-Driven Development (BDD)**, orientada al patrón formal **Given-When-Then** (Dado un estado de la red, Cuando el analizador busca la ruta, Entonces emite la suma de caminos válidos).
+* **Test de la Parte A:** Inyecta un grafo base de prueba funcional y valida la correcta lectura de nodos finales y sumideros, garantizando que el contador recursivo identifique un total de rutas viables a nivel de sistema base.
+* **Test de la Parte B:** Somete a estrés los filtros de hitos obligatorios del `DfsState`. Valida la correcta resolución de los flujos de memoria en grafo, confirmando que las rutas memorizadas certifican matemáticamente haber atravesado los nodos limitantes antes de ser retornadas como válidas.
