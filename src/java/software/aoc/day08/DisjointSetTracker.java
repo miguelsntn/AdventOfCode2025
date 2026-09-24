@@ -5,22 +5,26 @@ import java.util.stream.IntStream;
 
 public class DisjointSetTracker implements NetworkTracker {
     private final int[] parent;
-    private final int[] size;
-    private int clusters;
+    private final int[] clusterSize;
+    private int activeClusters;
 
     public DisjointSetTracker(int totalNodes) {
         this.parent = new int[totalNodes];
-        this.size = new int[totalNodes];
-        this.clusters = totalNodes;
+        this.clusterSize = new int[totalNodes];
+        this.activeClusters = totalNodes;
+
         for (int i = 0; i < totalNodes; i++) {
             parent[i] = i;
-            size[i] = 1;
+            clusterSize[i] = 1;
         }
     }
 
-    private int findRoot(int i) {
-        if (parent[i] == i) return i;
-        return parent[i] = findRoot(parent[i]);
+    private int findRoot(int nodeId) {
+        if (parent[nodeId] == nodeId) {
+            return nodeId;
+        }
+        parent[nodeId] = findRoot(parent[nodeId]);
+        return parent[nodeId];
     }
 
     @Override
@@ -28,16 +32,19 @@ public class DisjointSetTracker implements NetworkTracker {
         int root1 = findRoot(id1);
         int root2 = findRoot(id2);
 
-        if (root1 == root2) return false;
+        if (root1 == root2) {
+            return false;
+        }
 
-        if (size[root1] < size[root2]) {
+        if (clusterSize[root1] < clusterSize[root2]) {
             parent[root1] = root2;
-            size[root2] += size[root1];
+            clusterSize[root2] += clusterSize[root1];
         } else {
             parent[root2] = root1;
-            size[root1] += size[root2];
+            clusterSize[root1] += clusterSize[root2];
         }
-        clusters--;
+
+        activeClusters--;
         return true;
     }
 
@@ -45,12 +52,12 @@ public class DisjointSetTracker implements NetworkTracker {
     public List<Integer> getClusterSizes() {
         return IntStream.range(0, parent.length)
                 .filter(i -> parent[i] == i)
-                .mapToObj(i -> size[i])
+                .mapToObj(i -> clusterSize[i])
                 .toList();
     }
 
     @Override
     public int getRemainingClusters() {
-        return clusters;
+        return activeClusters;
     }
 }
