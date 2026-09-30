@@ -28,17 +28,39 @@ El código de todos los retos está diseñado respetando una estricta jerarquía
 El diseño de la arquitectura general se rige por directrices fundamentales:
 
 * **Principios SOLID:**
-* **S** (*Single Responsibility*): Clases hiper-enfocadas (ej. `FarmParser` solo lee texto, `FarmAllocator` solo calcula áreas).
-* **O** (*Open/Closed*): Sistemas abiertos a extensión mediante nuevas implementaciones sin modificar el código original (esencial en la transición de las Partes A a las Partes B de cada día).
-* **L** (*Liskov Substitution*) & **COI** (*Composition Over Inheritance*): Preferencia absoluta por la composición de objetos frente a jerarquías de herencia rígidas, asegurando que las abstracciones puedan ser sustituidas sin romper la correctitud del programa.
-* **I** (*Interface Segregation*): Exposición de APIs minimalistas, donde el cliente solo conoce los métodos estrictamente necesarios para operar (Principio de Mínimo Compromiso).
-* **D** (*Dependency Inversion*): Las clases de alto nivel no instancian sus dependencias. Reciben colecciones e interfaces a través de sus constructores (Inyección de Dependencias).
+* **S (*Single Responsibility Principle*):** Clases hiper-enfocadas con una única razón para cambiar.
+* *Ejemplo:* En el **Día 12**, el análisis léxico del texto recae exclusivamente en `FarmParser`, la transformación geométrica a binario en `ShapeVariation`, y la lógica pura de empaquetado 2D en `FarmAllocator`. Un cambio en el formato de lectura del fichero jamás obligaría a tocar el algoritmo matemático.
+
+
+* **O (*Open/Closed Principle*):** Sistemas abiertos a extensión mediante nuevas implementaciones sin modificar el código original (esencial en la transición de las Partes A a las Partes B).
+* *Ejemplo:* En el **Día 7**, cuando la física pasó de ser clásica a cuántica, el código original no se llenó de condicionales `if (esParteB)`. La lógica se extendió implementando polimórficamente la interfaz `TachyonPhysicsEngine` con una nueva clase `QuantumPhysicsEngine`, manteniendo el motor de la Parte A intacto.
+
+
+* **L (*Liskov Substitution Principle*) & COI (*Composition Over Inheritance*):** Preferencia absoluta por la composición frente a jerarquías de herencia rígidas, asegurando que las abstracciones puedan ser sustituidas sin romper la correctitud.
+* *Ejemplo (LSP):* En el **Día 12**, `ShapeVariation` sobrescribe rigurosamente `equals` y `hashCode`. Esto garantiza el contrato matemático exigido por las colecciones de Java, permitiendo que un `HashSet` purgue piezas simétricas duplicadas sin fallos silenciosos.
+* *Ejemplo (COI):* En el **Día 11.B**, `MandatoryRouteAnalyzer` evita heredar de `BasicRouteAnalyzer`. En su lugar, se compone recibiendo su propia instancia inmutable de `ReactorNetwork`, reduciendo el acoplamiento y la fragilidad del diseño.
+
+
+* **I (*Interface Segregation Principle*):** Exposición de APIs minimalistas, donde el cliente solo conoce los métodos estrictamente necesarios para operar (Principio de Mínimo Compromiso).
+* *Ejemplo:* En el **Día 8**, la interfaz `NetworkTracker` solo expone tres operaciones atómicas (`linkNodes`, `getClusterSizes`, `getRemainingClusters`). El orquestador algorítmico desconoce por completo que por debajo se está ejecutando una compleja estructura *Union-Find* con arrays primitivos (`DisjointSetTracker`).
+
+
+* **D (*Dependency Inversion Principle*):** Las clases de alto nivel no instancian sus dependencias, ni leen archivos del disco. Reciben colecciones e interfaces a través de sus constructores (*Inyección de Dependencias*).
+* *Ejemplo:* En el **Día 10**, `JoltageOptimizer` exige que se le inyecte un `MachineBlueprint` por parámetro. Esto aísla por completo la matemática del sistema de *I/O*, permitiendo inyectar configuraciones sintéticas minúsculas durante los tests unitarios para ejecutarlos en milisegundos.
 
 
 * **Don’t Repeat Yourself (DRY):** Centralización de la lógica común, matemática de coordenadas o parseo en paquetes compartidos para evitar la duplicación de conocimiento.
-* **Law of Demeter (LoD):** Aplicación de la regla *"Tell, Don't Ask"*. Los componentes de gestión ordenan a los objetos ejecutar acciones, en lugar de extraer sus datos internos. Esto minimiza el acoplamiento y facilita las pruebas unitarias aisladas.
-* **Keep It Simple, Stupid (KISS) y YAGNI (You Aren't Gonna Need It):** Resoluciones directas enfocadas exclusivamente en los requerimientos del día, evitando abstracciones preventivas y sobre-ingeniería para problemas que aún no existen.
+* *Ejemplo:* En todos los días se utilizan **Factory Methods** (ej. `GridPoint.fromString(line)` en el **Día 9** o `CircuitNode.fromLine()` en el **Día 8**). Esto erradica la duplicación de bloques de código dedicados a hacer `split(",")` y `Long.parseLong(...)` a lo largo del sistema.
 
+
+* **Law of Demeter (LoD):** Aplicación de la regla *"Tell, Don't Ask"*. Los componentes ordenan a los objetos ejecutar acciones, en lugar de extraer sus datos internos para procesarlos fuera.
+* *Ejemplo:* En el **Día 9**, en lugar de que el orquestador extraiga las coordenadas X e Y de dos puntos para aplicar fórmulas matemáticas, simplemente le ordena a un punto que se evalúe contra otro: `p1.calculateAreaTo(p2)`. La entidad es dueña de su propia lógica geométrica.
+* *Ejemplo:* En el **Día 1**, el orquestador no manipula la posición del dial. Simplemente le pasa el comando (`dial.apply(order)`) y la entidad devuelve un nuevo estado inmutable.
+
+
+* **Keep It Simple, Stupid (KISS) y YAGNI (You Aren't Gonna Need It):** Resoluciones directas enfocadas exclusivamente en los requerimientos del día, evitando abstracciones preventivas y sobre-ingeniería para problemas que aún no existen.
+* *Ejemplo (KISS):* En el **Día 4**, se optó por un simple array primitivo bidimensional (`boolean[][]`) para representar el papel impreso en lugar de crear un objeto pesado `Cell` con atributos de estado.
+* *Ejemplo (YAGNI):* En el **Día 11**, el recorrido DFS asume estrictamente que la red es un grafo acíclico dirigido (DAG) hacia la salida, tal y como dictaba el problema. No se implementó lógica adicional preventiva para detectar ciclos infinitos bidireccionales, priorizando un código limpio, rápido y estrictamente necesario.
 ---
 
 ## Técnicas y Gestión de Memoria
@@ -74,27 +96,27 @@ Las soluciones de absolutamente todos los días se validan de forma automatizada
 La siguiente tabla detalla la evolución arquitectónica diaria y los patrones aplicados para resolver cada reto matemático o algorítmico:
 
 | Día      | Título | Documentación                                                                | Código                                                                                | Principios y Patrones Aplicados |
-|----------| --- |------------------------------------------------------------------------------|---------------------------------------------------------------------------------------| --- |
-| **1.A**  | *Secret Entrance* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day01.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day01/a) | SRP, Factory Method. |
-| **1.B**  | *Secret Entrance* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day01.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day01/b) | OCP, DRY, Inmutabilidad de Estado. |
-| **2.A**  | *Gift Shop* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day02.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day02/a) | SRP, Factory Method, Expresiones Regulares. |
-| **2.B**  | *Gift Shop* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day02.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day02/b) | OCP, DRY, Optimización de Primitives Streams. |
-| **3.A**  | *Lobby* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day03.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day03/a) | SRP, Factory Method. |
-| **3.B**  | *Lobby* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day03.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day03/b) | OCP, Monotonic Stack, Suffix Arrays. |
-| **4.A**  | *Printing Department* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day04.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day04/a) | SRP, Factory Method, Matrices Primitivas encapsuladas. |
-| **4.B**  | *Printing Department* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day04.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day04/b) | OCP, DRY, Double Buffering (Zero Allocation). |
-| **5.A**  | *Cafeteria* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day05.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day05/a) | SRP, ISP, Búsqueda Interseccional Estática. |
-| **5.B**  | *Cafeteria* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day05.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day05/b) | OCP, Custom Collector, Merge Intervals Algorithm. |
+|----------| --- |------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|---------------------------------|
+| **1.A**  | *Secret Entrance* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day01.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day01/a) | SRP, Factory Method.            |
+| **1.B**  | *Secret Entrance* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day01.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day01/b) | OCP, DRY, Factory Method.       |
+| **2.A**  | *Gift Shop* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day02.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day02/a) | SRP, Factory Method.            |
+| **2.B**  | *Gift Shop* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day02.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day02/b) | OCP, DRY.                       |
+| **3.A**  | *Lobby* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day03.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day03/a) | SRP, Factory Method.            |
+| **3.B**  | *Lobby* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day03.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day03/b) | OCP, Factory Method.            |
+| **4.A**  | *Printing Department* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day04.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day04/a) | SRP, Factory Method.            |
+| **4.B**  | *Printing Department* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day04.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day04/b) | OCP, DRY, Factory Method.       |
+| **5.A**  | *Cafeteria* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day05.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day05/a) | SRP, ISP, Factory Method.       |
+| **5.B**  | *Cafeteria* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day05.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day05/b) | OCP, LSP, Factory Method.       |
 | **6.A**  | *Trash Compactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day06.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day06/a) | SRP, Strategy, Template Method. |
-| **6.B**  | *Trash Compactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day06.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day06/b) | OCP, LSP, DIP, Parsing Espacial 2D. |
-| **7.A**  | *Laboratories* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day07.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day07/a) | SRP, Singleton, Simulación de Estados (Classical Physics). |
-| **7.B**  | *Laboratories* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day07.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day07/b) | OCP, LSP, DIP, Programación Dinámica (State-Space Reduction). |
-| **8.A**  | *Playground* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day08.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day08/a) | SRP, Factory Method, Union-Find (Disjoint-Set). |
-| **8.B**  | *Playground* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day08.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day08/b) | OCP, LSP, DIP, Algoritmo de Kruskal (Minimum Spanning Tree). |
-| **9.A**  | *Movie Theater* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day09.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day09/a) | SRP, Programación Declarativa Funcional. |
-| **9.B**  | *Movie Theater* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day09.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day09/b) | OCP, ISP, Short-Circuiting Imperativo, Algoritmo Ray-Casting. |
-| **10.A** | *Factory* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day10.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day10/a) | SRP, Bitwise Operations (Máscaras y XOR). |
-| **10.B** | *Factory* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day10.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day10/b) | OCP, LSP, DIP, Programación Dinámica con Memoización. |
-| **11.A** | *Reactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day11.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day11/a) | SRP, Búsqueda en Profundidad (DFS), Directed Acyclic Graphs (DAG). |
-| **11.B** | *Reactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day11.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day11/b) | OCP, COI, State Object Pattern, Cache/Memoización. |
-| **12**   | *Christmas Tree Farm* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day12.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day12) | SRP, Factory Method, Bitwise Operations, Imperative Backtracking, State Memoization. |
+| **6.B**  | *Trash Compactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day06.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day06/b) | OCP, LSP, DIP, Factory Method.  |
+| **7.A**  | *Laboratories* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day07.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day07/a) | SRP, Singleton, Factory Method. |
+| **7.B**  | *Laboratories* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day07.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day07/b) | OCP, LSP, DIP.                  |
+| **8.A**  | *Playground* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day08.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day08/a) | SRP, DRY, Factory Method.       |
+| **8.B**  | *Playground* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day08.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day08/b) | OCP, LSP, DIP.                  |
+| **9.A**  | *Movie Theater* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day09.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day09/a) | SRP, Factory Method.            |
+| **9.B**  | *Movie Theater* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day09.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day09/b) | OCP, ISP, Factory Method.       |
+| **10.A** | *Factory* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day10.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day10/a) | SRP, Factory Method.            |
+| **10.B** | *Factory* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day10.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day10/b) | OCP, LSP, DIP.                  |
+| **11.A** | *Reactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day11.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day11/a) | SRP, Factory Method.            |
+| **11.B** | *Reactor* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day11.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day11/b) | OCP, COI, DRY.                  |
+| **12**   | *Christmas Tree Farm* | [Doc](https://github.com/miguelsntn/AdventOfCode2025/blob/main/doc/day12.md) | [Main](https://github.com/miguelsntn/AdventOfCode2025/tree/main/src/java/software/aoc/day12) | SRP, Factory Method, LSP.       |
