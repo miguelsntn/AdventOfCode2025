@@ -1,49 +1,42 @@
 # Día 12: Granja de Árboles de Navidad
 
-El desafío final nos ha llevado a un problema clásico y computacionalmente complejo: el **Empaquetamiento 2D** (*2D Bin Packing* / *Polyomino Tiling*). El objetivo era determinar si un conjunto específico de regalos de formas irregulares (poliminós) podía encajar perfectamente en una cuadrícula bidimensional bajo un árbol, permitiendo rotaciones y volteos, pero sin apilamientos ni solapamientos.
+En este último día, el problema logístico de empaquetar regalos (Empaquetamiento 2D) presenta un desafío computacional de categoría NP-Hard. Sin embargo, el verdadero reto no es solo resolver el algoritmo, sino **diseñar una arquitectura de software capaz de soportar una carga combinatoria masiva sin colapsar la memoria del sistema**.
 
-Al ser un problema de categoría **NP-Hard**, la complejidad combinatoria es factorial. No existe una fórmula matemática rápida para resolverlo; requiere explorar el espacio de soluciones aplicando heurísticas de optimización y podas extremas (Pruning) para evitar tiempos de ejecución infinitos.
+El enfoque de esta solución prioriza un diseño robusto, altamente testeable y estructurado sobre los fundamentos de la Programación Orientada a Objetos.
 
-## 1. Lógica Estructural
+## 1. Modelado del Dominio y Topología de Clases
 
-Se diseñó un ecosistema geométrico puramente inmutable, delegando el estado a *records* y aislando el motor de búsqueda en una entidad orquestadora:
+El sistema se ha modelado aplicando una estricta **Separación de Responsabilidades (Separation of Concerns)**. Cada clase tiene un propósito arquitectónico definido:
 
-* **`Angle` (Enum):** Encapsula las fórmulas matemáticas de transformación bidimensional. Al aplicar el patrón funcional `RotatingFunction`, permite rotar coordenadas en un tiempo de $O(1)$.
-* **`Position` (Record):** Modela las coordenadas $(X, Y)$ y provee traslaciones puras.
-* **`PresentShape`:** Entidad matemática del regalo. Al instanciarse, genera declarativamente y purga duplicados de sus 8 variaciones espaciales posibles (4 rotaciones + 4 reflexiones).
-* **`TreeRegion` (Record):** El tablero de juego inmutable. Expone un método funcional `place()` que, en caso de colisión, devuelve un `Optional.empty()`, y en caso de éxito, devuelve un nuevo tablero clonado dentro de un `Optional`.
-* **`FarmAllocator`:** El orquestador funcional del algoritmo de búsqueda. Explora el árbol de decisiones mediante *Backtracking* declarativo y *Memoización* de ramas fallidas.
-* **`FarmParser`:** Clase utilitaria o factoría que aísla la lógica sucia de la lectura del fichero de texto, retornando DTOs (Data Transfer Objects) listos para la simulación.
+* **`Point` (Value Object):** Un *record* inmutable que encapsula las coordenadas $(r, c)$. Es el bloque de construcción geométrico base. Implementa traslaciones algebraicas puras (`rotate()`, `flip()`) devolviendo siempre nuevas instancias para evitar mutaciones de estado.
+* **`TreeRegion` (Data Transfer Object):** Un *record* que actúa como DTO inmutable. Define las restricciones físicas del tablero (ancho y alto) y el inventario exacto de piezas (`pieceCounts`) requeridas para esa región.
+* **`ShapeVariation` (Estructura Optimizada y Factory Method):** Representa una rotación específica de un regalo, pero abstraída a nivel binario. Utiliza el patrón **Factory Method** (`from(List<Point>)`) para ocultar la compleja conversión de coordenadas a un array de máscaras de bits primitivas (`long[] masks`). Sobrescribe rigurosamente `equals` y `hashCode` para garantizar el comportamiento correcto en colecciones matemáticas.
+* **`PresentShape` (Entidad de Dominio):** Representa un regalo conceptual. Ejerce encapsulación fuerte y **Precomputación (Eager Initialization)**: en lugar de calcular rotaciones dinámicamente, al instanciarse genera y normaliza al origen $(0,0)$ todas sus variaciones espaciales válidas (rotaciones y reflejos), eliminando duplicados simétricos y exponiendo su estado final en modo de solo lectura.
+* **`FarmParser` (Capa de Infraestructura / I/O):** Actúa como una factoría utilitaria. Su única misión es ingerir listas de texto crudo y transformar (parsear) esos caracteres en objetos de dominio puros (agrupados en el record `ParsedFarm`). Aísla por completo el análisis léxico del resto del sistema.
+* **`FarmAllocator` (Servicio Orquestador):** El motor transaccional y algorítmico del sistema. No conoce la procedencia de los datos. Recibe un catálogo de piezas inyectado en su constructor y aplica el algoritmo de empaquetado para determinar si las regiones son válidas.
 
-## 2. Paradigma Funcional
+## 2. Estrategias de Optimización
 
-En problemas de *Backtracking*, el enfoque tradicional es mantener una matriz global y mutarla constantemente (hacer y deshacer el movimiento). Aunque esto puede parecer eficiente a nivel de memoria (Stack), es **extremadamente propenso a errores de estado ocultos (Side-Effects)**.
+El sistema se protegió contra tiempos de ejecución exponenciales aplicando programación dinámica:
 
-Para este desafío, decidimos pivotar radicalmente hacia la **Inmutabilidad Absoluta** y el **Paradigma Declarativo**:
+1. **Diseño Fail-Fast (Poda Temprana):** Se aplican aserciones de negocio antes de la recursión. Si el área total de las piezas excede el área disponible en el `TreeRegion`, el cálculo aborta al instante, ahorrando CPU frente a precondiciones imposibles.
+2. **Caché y Memoización (State Memoization):** Se implementó un registro (`Set<String> failedStates`) para cachear ramas de ejecución inválidas. Al serializar el estado exacto del tablero (`grid`) y el índice de pieza, el sistema aplica el principio de **no recalcular lo ya conocido**, podando ramas combinatorias muertas en tiempo $O(1)$.
 
-* Cuando el sistema prueba a colocar una pieza, nunca ensucia el tablero actual. El método `place()` utiliza **Mónadas (`Optional`)**.
-* Toda la búsqueda profunda se ha aplanado combinando `flatMap()` para generar variaciones espaciales y `anyMatch()` para la recursividad encadenada, logrando que un algoritmo de búsqueda exhaustiva tenga una **complejidad ciclomática aparente de cero bucles explícitos**.
+## 3. Principios de Diseño (SOLID)
 
-## 3. Algoritmia Avanzada y Poda
+El ecosistema de clases respeta estrictamente los principios SOLID:
 
-Para compensar el coste de clonar objetos en el *Heap*, se implementaron tres heurísticas críticas que destrozan la complejidad temporal:
+* **Single Responsibility Principle (SRP):** Cohesión máxima. `FarmParser` solo escanea texto, `ShapeVariation` transforma geometría a binario, y `FarmAllocator` solo evalúa encajes. Un cambio en el formato del fichero jamás obligará a tocar el motor algorítmico.
+* **Open/Closed Principle (OCP):** El motor `FarmAllocator` está abierto a la extensión pero cerrado a la modificación. Podríamos añadir nuevas formas geométricas exóticas inyectándolas en el catálogo y el algoritmo funcionaría sin cambiar una sola línea, ya que depende de la abstracción matemática (máscaras de bits).
+* **Liskov Substitution Principle (LSP):** Se respetó el contrato fundamental de Liskov en la sobrescritura de `equals()` y `hashCode()` de `ShapeVariation`. El *Collections Framework* de Java (`HashSet` dentro de `PresentShape`) confía ciegamente en este contrato; violar LSP aquí corrompería la purga de piezas duplicadas.
+* **Dependency Inversion Principle (DIP):** Las dependencias fluyen hacia la abstracción. `FarmAllocator` exige que su dependencia (`Map<Integer, PresentShape> catalog`) le sea **inyectada** por constructor, logrando un Desacoplamiento (Decoupling) total entre la lógica de negocio y el origen de los datos.
 
-1. **Poda Estática Temprana ($O(1)$):** Antes de iniciar la costosa búsqueda recursiva, el método `solve()` verifica axiomas algebraicos. Si la suma del área de los regalos a colocar supera el área total de la cuadrícula, el cálculo se aborta instantáneamente retornando `0` (fallo).
-2. **Heurística Largest-First (Ordenación Decreciente):** Intentar colocar primero las piezas pequeñas fragmenta el espacio, garantizando fallos tardíos. Al iniciar, el `FarmAllocator` preordena la lista de regalos descendentemente por área (`sorted(reverseOrder())`). Esto fuerza al árbol de búsqueda a acomodar primero los bloques más grandes, alcanzando los puntos de colisión (y por tanto, podando la rama) muchísimo más rápido.
-3. **Memoización de Estados Fallidos (Dynamic Programming):** Se introdujo una memoria de ramas muertas (`Set<Integer> failedStates`). Si una configuración exacta del tablero con un índice de pieza específico ya demostró ser un callejón sin salida, la exploración se aborta en $O(1)$. El identificador único del estado se genera ultrarrápido combinando el índice de profundidad con el `Arrays.deepHashCode()` de la matriz.
+## 4. Verificación
 
-## 4. Principios de Diseño (SOLID)
+Las soluciones se validan de forma automatizada mediante pruebas unitarias usando JUnit 5 y AssertJ.
 
-* **Single Responsibility Principle (SRP):** Las responsabilidades están quirúrgicamente separadas. `FarmParser` se encarga exclusivamente del análisis léxico; `Angle` maneja trigonometría discreta; `PresentShape` gestiona geometría estática, y `FarmAllocator` dirige el recorrido del árbol de decisiones.
-* **Open/Closed Principle (OCP):** El diseño está abierto a la extensión. Podríamos introducir nuevas formas de transformar piezas (ej. distorsiones tridimensionales) modificando internamente `PresentShape`, sin necesidad de alterar el motor de búsqueda en `FarmAllocator`.
-* **Liskov Substitution Principle (LSP) y Composition Over Inheritance (COI):** Se evitó heredar de clases de geometría pesadas (como `java.awt.Polygon`). Al preferir la composición con matrices de primitivos (`int[][]`), aseguramos un comportamiento predecible, determinista y sustituible.
-* **Interface Segregation Principle (ISP) y Principio de Mínimo Compromiso:** Los componentes se comunican a través de contratos mínimos. El motor de búsqueda ignora el origen del texto, limitándose a consumir colecciones destiladas (`List<PresentShape>`).
-* **Dependency Inversion Principle (DIP):** La lógica de negocio está completamente invertida. El `FarmAllocator` no lee ficheros ni insta sus propios catálogos; recibe las peticiones y las piezas en el momento de su inicialización a través del constructor, inyectadas por el orquestador de pruebas.
+Se aplicó la estructura semántica Given-When-Then para validar el comportamiento del sistema.
 
-## 5. Verificación y Tests (BDD)
+La inyección de dependencias permite simular catálogos diminutos en memoria durante la fase Given, verificando la matemática pura de los desplazamientos de bits (<<) de forma asilada antes de lanzar el motor contra los complejos mapas del problema original.
 
-Las soluciones se validan de forma automatizada mediante **pruebas unitarias** usando **JUnit 5** y **AssertJ**.
-
-* Se aplicó la estructura semántica **Given-When-Then** para validar el comportamiento del sistema.
-* El sistema de pruebas no actúa como un mero validador pasivo; en la fase**When**, asume un rol funcional orquestando la lectura del `FarmParser` y la inicialización independiente de un `FarmAllocator` para cada petición del usuario (mediante `Stream.generate().limit()`). Esto garantiza una estricta **Independencia Transaccional**, asegurando que los historiales de memoización de una granja fallida no contaminen los cálculos bidimensionales de la siguiente.
-* El resultado esperado es 403.
+El resultado final esperado para las regiones válidas es 403.
